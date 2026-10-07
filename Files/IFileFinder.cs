@@ -2,7 +2,7 @@
 
 internal interface IFileFinder
 {
-    FileInfo[] FindFiles(
+    FileInfoWrapper[] FindFiles(
         bool recursive = false,
         string fileSpecification = "*");
 }

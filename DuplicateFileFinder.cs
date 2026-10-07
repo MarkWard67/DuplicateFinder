@@ -15,21 +15,26 @@ internal class DuplicateFileFinder
         _fileHasher = fileHasher;
     }
 
-    public FileInfo[][] FindDuplications()
+    public FileInfoWrapper[][] FindDuplications()
     {
-        var allFileInfos = _fileFinder.FindFiles();
+        // When a file is duplicated within a single folder, we want to ignore all but one of the duplicates
+        var intraFolderDuplicateFinder = new IntraFolderDuplicateFileFinder(_fileFinder, _fileHasher);
+        var intraFolderDuplicates = intraFolderDuplicateFinder.FindDuplications();
+        var fileFullNamesToIgnore = intraFolderDuplicates
+            .SelectMany(x => x)
+            .Where(x => x.Attributes.ToBeDeleted)
+            .Select(x => x.FileInfo.FullName)
+            .Distinct()
+            .ToHashSet();
 
-        var fileInfosBySize = allFileInfos
-            .GroupBy(f => f.Length)
+        var allFileInfos = _fileFinder.FindFiles()
+            .Where(x => !fileFullNamesToIgnore.Contains(x.FileInfo.FullName));
+
+        var duplicateFileInfos = allFileInfos
+            .GroupBy(f => (f.FileInfo.Length, Hash: _fileHasher.ComputeFileHash(f.FileInfo.FullName)))
             .Where(g => g.Count() > 1)
             .ToList();
 
-        var duplicatesBySizeAndHash = fileInfosBySize
-            .SelectMany(g => g.Select(x => x))
-            .GroupBy(f => _fileHasher.ComputeFileHash(f.FullName))
-            .Where(g => g.Count() > 1)
-            .ToList();
-
-        return duplicatesBySizeAndHash.Select(g => g.ToArray()).ToArray();
+        return duplicateFileInfos.Select(g => g.ToArray()).ToArray();
     }
 }

@@ -1,25 +1,25 @@
 ﻿namespace DuplicateFinder.Folders;
 
-internal class FolderFinder : IFolderFinder
+internal class FolderFinder(
+    string[] rootFolderPaths,
+    string folderSpecification,
+    bool recursive,
+    IFolderExcluder? folderExcluder = null)
+    : IFolderFinder
 {
-    private readonly IFolderExcluder _folderExcluder;
-    private readonly string _folderSpecification;
-    private readonly bool _recursive;
-    private readonly string[] _rootFolderPaths;
+    private readonly string[] _rootFolderPaths = rootFolderPaths.Distinct().ToArray();
 
     public FolderFinder(
-        string rootPath,
+        string rootFolderPath,
         string folderSpecification,
         bool recursive,
-        IFolderExcluder folderExcluder,
-        params string[] additionalRootFolderPaths)
+        IFolderExcluder? folderExcluder = null)
+    : this(
+        [rootFolderPath],
+        folderSpecification,
+        recursive,
+        folderExcluder)
     {
-        _folderSpecification = folderSpecification;
-        _recursive = recursive;
-        _folderExcluder = folderExcluder;
-        var rootFolderPaths = new List<string> { rootPath };
-        rootFolderPaths.AddRange(additionalRootFolderPaths);
-        _rootFolderPaths = rootFolderPaths.Distinct().ToArray();
     }
 
     public DirectoryInfo[] FindFolders()
@@ -32,10 +32,10 @@ internal class FolderFinder : IFolderFinder
                 ret.AddRange(
                     Directory.GetDirectories(
                         x,
-                        _folderSpecification,
+                        folderSpecification,
                         new EnumerationOptions
                         {
-                            RecurseSubdirectories = _recursive,
+                            RecurseSubdirectories = recursive,
                             MatchType = MatchType.Win32,
                             IgnoreInaccessible = true,
                             AttributesToSkip = FileAttributes.Hidden | FileAttributes.System,
@@ -45,7 +45,7 @@ internal class FolderFinder : IFolderFinder
                 return ret;
             })
             .Distinct()
-            .Where(x => !_folderExcluder.ExcludeFolder(x))
+            .Where(x => folderExcluder == null || !folderExcluder.ExcludeFolder(x))
             .Select(x => new DirectoryInfo(x))
             .Where(x => x.Exists)
             .ToArray();

@@ -1,19 +1,8 @@
 ﻿namespace DuplicateFinder.Folders;
 
-internal class ExplicitFolderExcluder : IFolderExcluder
+internal class ExplicitFolderExcluder(string[] excludedFolders) : IFolderExcluder
 {
-    private readonly HashSet<string>? _excludedFolders;
-
-    private ExplicitFolderExcluder()
-    {
-    }
-
-    public ExplicitFolderExcluder(string[] excludedFolders)
-    {
-        _excludedFolders = excludedFolders.Distinct().ToHashSet();
-    }
-
-    public static ExplicitFolderExcluder DefaultInstance { get; } = new();
+    private readonly HashSet<string>? _excludedFolders = excludedFolders.Distinct().ToHashSet();
 
     public bool ExcludeFolder(string folderFullPath)
     {

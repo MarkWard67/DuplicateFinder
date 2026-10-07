@@ -1,5 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 
+namespace DuplicateFinder.Folders;
+
 public enum KnownFolder
 {
     Contacts,

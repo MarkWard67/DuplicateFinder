@@ -18,41 +18,41 @@ internal class GooglePhotosBinChecker
         _fileHasher = fileHasher;
     }
 
-    public (FileInfo, FileInfo[])[] CheckBin()
+    public (FileInfoWrapper, FileInfoWrapper[])[] CheckBin()
     {
         var photosBinFileInfos = _photosBinFileFinder.FindFiles();
         var driveFileInfos = _driveFileFinder.FindFiles();
 
         var driveFileInfosBySize = driveFileInfos
-            .GroupBy(x => x.Length)
+            .GroupBy(x => x.FileInfo.Length)
             .ToDictionary(
                 x => x.Key,
                 x => x.ToArray());
 
         var driveFileInfosByName = driveFileInfos
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase
+            .GroupBy(x => x.FileInfo.Name, StringComparer.OrdinalIgnoreCase
             )
             .ToDictionary(
                 x => x.Key,
                 x => x.ToArray(),
                 StringComparer.OrdinalIgnoreCase);
 
-        var problemFiles = new List<(FileInfo, FileInfo[])>();
+        var problemFiles = new List<(FileInfoWrapper, FileInfoWrapper[])>();
         foreach (var photoBinFileInfo in photosBinFileInfos)
         {
-            var driveFilesOfSameLength = driveFileInfosBySize.GetValueOrDefault(photoBinFileInfo.Length);
+            var driveFilesOfSameLength = driveFileInfosBySize.GetValueOrDefault(photoBinFileInfo.FileInfo.Length);
             if (driveFilesOfSameLength == null)
             {
-                var driveFilesOfSameName = driveFileInfosByName.GetValueOrDefault(photoBinFileInfo.Name);
+                var driveFilesOfSameName = driveFileInfosByName.GetValueOrDefault(photoBinFileInfo.FileInfo.Name);
                 problemFiles.Add((photoBinFileInfo, driveFilesOfSameName?.ToArray() ?? []));
 
                     continue;
             }
 
-            var photoBinFileHash = _fileHasher.ComputeFileHash(photoBinFileInfo.FullName);
+            var photoBinFileHash = _fileHasher.ComputeFileHash(photoBinFileInfo.FileInfo.FullName);
             var driveFile =
                 driveFilesOfSameLength
-                    .FirstOrDefault(f => _fileHasher.ComputeFileHash(f.FullName) == photoBinFileHash);
+                    .FirstOrDefault(f => _fileHasher.ComputeFileHash(f.FileInfo.FullName) == photoBinFileHash);
 
             if (driveFile == null)
             {

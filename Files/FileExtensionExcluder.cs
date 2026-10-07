@@ -1,8 +1,6 @@
 ﻿namespace DuplicateFinder.Files;
 
-internal class FileExtensionExcluder(
-    string[] fileExtensions,
-    IFileExcluder? innerExcluder = null)
+internal class FileExtensionExcluder(string[] fileExtensions)
     : IFileExcluder
 {
     private readonly HashSet<string> _fileExtensions =
@@ -10,11 +8,6 @@ internal class FileExtensionExcluder(
 
     public bool ExcludeFile(FileInfo fileInfo)
     {
-        if (_fileExtensions.Contains(fileInfo.Extension))
-        {
-            return true;
-        }
-
-        return innerExcluder?.ExcludeFile(fileInfo) == true;
+        return _fileExtensions.Contains(fileInfo.Extension);
     }
 }
