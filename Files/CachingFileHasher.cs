@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 
 namespace DuplicateFinder.Files;
 
-internal abstract class CachingFileHasher : FileHasher
+internal abstract class CachingFileHasher : FileHasher, ICachingFileHasher
 {
     private readonly ConcurrentDictionary<string, string> _cache = new();
 
@@ -15,5 +15,15 @@ internal abstract class CachingFileHasher : FileHasher
     public override string ComputeFileHash(string fileFullName)
     {
         return _cache.GetOrAdd(fileFullName, base.ComputeFileHash);
+    }
+
+    public void ClearCache()
+    {
+        _cache.Clear();
+    }
+
+    public bool ConfirmCache(string[] expectedKeys)
+    {
+        return expectedKeys.All(x => _cache.ContainsKey(x));
     }
 }

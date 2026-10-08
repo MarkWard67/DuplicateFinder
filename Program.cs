@@ -4,119 +4,148 @@ using DuplicateFinder.Files;
 using DuplicateFinder.Folders;
 using TextCopy;
 
-//////////// UNZIP GOOGLE TAKEOUT ZIP FILES
-//////////var zipFileExtractor = new ZipFileExtractor(
-//////////    @"C:\Temp",
-//////////    KnownFolders.GetPath(KnownFolder.Downloads),
-//////////    "takeout-20261006*.zip");
-//////////zipFileExtractor.ProgressChanged += (s, e) => Console.WriteLine(e.Value);
-//////////zipFileExtractor.Extract();
+const string rootFolder = @"C:\Temp";
 
 var cachingSha256FileHasher = new CachingSHA256FileHasher();
 
-/*
-// =================================================================
-// DUPLICATES IN INDIVIDUAL FOLDERS WITHIN A SINGLE FOLDER STRUCTURE
-// =================================================================
-*/
-//////////var duplicateFileFinder = new IntraFolderDuplicateFileFinder(
-//////////    new FileFinder(
-//////////        new FolderFinder(
-//////////            @"C:\Temp\Takeout\Drive\Office PC",
-//////////            "*",
-//////////            true),
-//////////        new ExplicitFileExcluder()),
-//////////    cachingSha256FileHasher);
-//////////var duplications = duplicateFileFinder.FindDuplications();
+var commandType = GetCommandType();
 
-//////////var sb = new StringBuilder("DUPLICATE FILES IN INDIVIDUAL FOLDERS").AppendLine();
-//////////foreach (var duplication in duplications)
-//////////{
-//////////    foreach (var fileInfo in duplication)
-//////////    {
-//////////        if (fileInfo.Attributes.ToBeDeleted)
-//////////        {
-//////////            sb.AppendLine($"@ERASE \"{fileInfo.FileInfo.FullName}\"");
-//////////        }
-//////////        else
-//////////        {
-//////////            sb.AppendLine($"@ECHO ERASING {duplication.Length - 1} FILES, RETAINING \"{fileInfo.FileInfo.FullName}\"");
-//////////        }
-//////////    }
-
-//////////    sb.AppendLine();
-//////////}
-
-//////////var duplicatesReport = sb.ToString();
-//////////ClipboardService.SetText(duplicatesReport);
-//////////Console.WriteLine(duplicatesReport);
-
-/*
-// =================================================
-// DUPLICATES WITHIN THE UNION OF FOLDERS STRUCTURES
-// =================================================
-*/
-var duplicateFileFinder = new DuplicateFileFinder(
-    new FileFinder(
-        new FolderFinder(
-            [
-                @"C:\Temp\Takeout\Drive\Office PC",
-                @"C:\Users\windo\Downloads\Mobile Devices"
-            ],
-            "*",
-            true),
-        new ExplicitFileExcluder()),
-    cachingSha256FileHasher);
-var duplications = duplicateFileFinder.FindDuplications();
-
-var sb = new StringBuilder("DUPLICATE FILES").AppendLine();
-foreach (var duplication in duplications)
+switch (commandType)
 {
-    foreach (var fileInfo in duplication.OrderBy(x => x.FileInfo.DirectoryName))
-    {
-        sb.AppendLine($"\"{fileInfo.FileInfo.FullName}\"");
-    }
+    case CommandType.ExtractZipFiles:
+        ExtractZipFiles("takeout-20261008*.zip");
+        break;
 
-    sb.AppendLine();
+    case CommandType.FindDuplicatesWithinFolders:
+        // Handle finding duplicates in individual folders
+        FindAndReportDuplicateInIndividualFolders(cachingSha256FileHasher, Path.Combine(rootFolder, @"Takeout\Drive\Office PC"));
+        break;
+
+    case CommandType.FindDuplicatesAcrossFolders:
+        // Handle finding duplicates across folder structures
+        FindAndReportDuplicateAcrossFolders(cachingSha256FileHasher);
+        break;
+
+    case CommandType.FindFilesUniqueToOneFolderStructure:
+        // Handle finding files unique to one folder structure
+        FindFilesUniqueToOneFolderStructure(cachingSha256FileHasher);
+        break;
+
+    default:
+        throw new ArgumentOutOfRangeException();
 }
 
-var duplicatesReport = sb.ToString();
-ClipboardService.SetText(duplicatesReport);
-Console.WriteLine(duplicatesReport);
+return;
 
-/*
-// ======================================================================
-// FILES IN ONE FOLDER STRUCTURE THAT ARE NOT IN ANOTHER FOLDER STRUCTURE
-// ======================================================================
-*/
-//////////var binChecker = new GooglePhotosBinChecker(
-//////////    new FileFinder(
-//////////        new FolderFinder(
-//////////            @"C:\Temp\Takeout\Google Photos\Bin",
-//////////            "*",
-//////////            true,
-//////////                new GooglePhotosAlbumFolderExcluder()
-//////////            ),
-//////////            new FileExtensionExcluder([".json"])),
-//////////    new FileFinder(
-//////////        new FolderFinder(
-//////////            @"C:\Temp\Takeout\Drive",
-//////////            "*",
-//////////            true),
-//////////        new ExplicitFileExcluder()),
-//////////    cachingSha256FileHasher);
-//////////var problematicPhotosDeletions = binChecker.CheckBin();
+static CommandType GetCommandType() => CommandType.FindDuplicatesWithinFolders;
 
-//////////var sb2 = new StringBuilder("PROBLEMATIC PHOTO DELETIONS");
-//////////foreach (var problematicPhotosDeletion in problematicPhotosDeletions)
-//////////{
-//////////    sb2.AppendLine(problematicPhotosDeletion.Item1.FileInfo.FullName);
-//////////    foreach (var f in problematicPhotosDeletion.Item2)
-//////////    {
-//////////        sb2.AppendLine($"\t{f.FileInfo.FullName}");
-//////////    }
-//////////}
+static void ExtractZipFiles(string zipFileSpec)
+{
+    var zipFileExtractor = new ZipFileExtractor(
+        rootFolder,
+        KnownFolders.GetPath(KnownFolder.Downloads),
+        zipFileSpec);
+    zipFileExtractor.ProgressChanged += (s, e) => Console.WriteLine(e.Value);
+    zipFileExtractor.Extract();
+}
 
-//////////var deletionsReport = sb2.ToString();
-//////////ClipboardService.SetText(deletionsReport);
-//////////Console.WriteLine(deletionsReport);
+static void FindAndReportDuplicateInIndividualFolders(IFileHasher fileHasher, string rootFolderPath) {
+    var duplicateFileFinder = new WithinFolderDuplicateFileFinder(
+        new FileFinder(
+            new FolderFinder(
+                rootFolderPath,
+                "*",
+                true),
+            new ExplicitFileExcluder()),
+        fileHasher);
+    var duplications = duplicateFileFinder.FindDuplications();
+
+    var sb = new StringBuilder("DUPLICATE FILES IN INDIVIDUAL FOLDERS").AppendLine();
+    foreach (var duplication in duplications)
+    {
+        foreach (var fileInfo in duplication)
+        {
+            if (fileInfo.Attributes.ToBeDeleted)
+            {
+                sb.AppendLine($"@ERASE \"{fileInfo.FileInfo.FullName}\"");
+            }
+            else
+            {
+                sb.AppendLine($"@ECHO ERASING {duplication.Length - 1} FILES, RETAINING \"{fileInfo.FileInfo.FullName}\"");
+            }
+        }
+
+        sb.AppendLine();
+    }
+
+    var report = sb.ToString();
+    ClipboardService.SetText(report);
+    Console.WriteLine(report);
+}
+
+static void FindAndReportDuplicateAcrossFolders(IFileHasher fileHasher)
+{
+    var duplicateFileFinder = new AcrossFoldersDuplicateFileFinder(
+        new FileFinder(
+            new FolderFinder(
+                [
+                    Path.Combine(rootFolder, @"Takeout\Drive\Office PC"),
+                    @"C:\Users\windo\Downloads\Mobile Devices"
+                ],
+                "*",
+                true),
+            new ExplicitFileExcluder()),
+        fileHasher);
+    var duplications = duplicateFileFinder.FindDuplications();
+
+    var sb = new StringBuilder("DUPLICATE FILES").AppendLine();
+    foreach (var duplication in duplications)
+    {
+        foreach (var fileInfo in duplication.OrderBy(x => x.FileInfo.DirectoryName))
+        {
+            sb.AppendLine($"\"{fileInfo.FileInfo.FullName}\"");
+        }
+
+        sb.AppendLine();
+    }
+
+    var report = sb.ToString();
+    ClipboardService.SetText(report);
+    Console.WriteLine(report);
+}
+
+static void FindFilesUniqueToOneFolderStructure(IFileHasher fileHasher)
+{
+    var binChecker = new GooglePhotosBinChecker(
+        new FileFinder(
+            new FolderFinder(
+                Path.Combine(rootFolder, @"Takeout\Google Photos\Bin"),
+                "*",
+                true,
+                new GooglePhotosAlbumFolderExcluder()
+            ),
+            new FileExtensionExcluder([".json"])),
+        new FileFinder(
+            new FolderFinder(
+                Path.Combine(rootFolder, @"Takeout\Drive"),
+                "*",
+                true),
+            new ExplicitFileExcluder()),
+        fileHasher);
+    var problematicPhotosDeletions = binChecker.CheckBin();
+
+    var sb = new StringBuilder("PROBLEMATIC PHOTO DELETIONS").AppendLine();
+    foreach (var problematicPhotosDeletion in problematicPhotosDeletions)
+    {
+        sb.AppendLine(problematicPhotosDeletion.Item1.FileInfo.FullName);
+        sb.AppendLine($"\t{problematicPhotosDeletion.Item1.FileInfo.Length}, {problematicPhotosDeletion.Item1.Attributes.FileHash}");
+        foreach (var f in problematicPhotosDeletion.Item2)
+        {
+            sb.AppendLine($"\t{f.FileInfo.FullName} -- {f.FileInfo.Length} {f.Attributes.FileHash}");
+        }
+    }
+
+    var report = sb.ToString();
+    ClipboardService.SetText(report);
+    Console.WriteLine(report);
+}

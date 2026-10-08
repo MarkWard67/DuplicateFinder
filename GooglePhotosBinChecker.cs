@@ -40,23 +40,19 @@ internal class GooglePhotosBinChecker
         var problemFiles = new List<(FileInfoWrapper, FileInfoWrapper[])>();
         foreach (var photoBinFileInfo in photosBinFileInfos)
         {
+            var driveFilesOfSameName = driveFileInfosByName.GetValueOrDefault(photoBinFileInfo.FileInfo.Name);
+
             var driveFilesOfSameLength = driveFileInfosBySize.GetValueOrDefault(photoBinFileInfo.FileInfo.Length);
             if (driveFilesOfSameLength == null)
             {
-                var driveFilesOfSameName = driveFileInfosByName.GetValueOrDefault(photoBinFileInfo.FileInfo.Name);
                 problemFiles.Add((photoBinFileInfo, driveFilesOfSameName?.ToArray() ?? []));
-
-                    continue;
+                continue;
             }
 
-            var photoBinFileHash = _fileHasher.ComputeFileHash(photoBinFileInfo.FileInfo.FullName);
-            var driveFile =
-                driveFilesOfSameLength
-                    .FirstOrDefault(f => _fileHasher.ComputeFileHash(f.FileInfo.FullName) == photoBinFileHash);
-
-            if (driveFile == null)
+            photoBinFileInfo.Attributes.FileHash = _fileHasher.ComputeFileHash(photoBinFileInfo.FileInfo.FullName);
+            if (driveFilesOfSameLength.All(f => _fileHasher.ComputeFileHash(f.FileInfo.FullName) != photoBinFileInfo.Attributes.FileHash))
             {
-                problemFiles.Add((photoBinFileInfo, []));
+                problemFiles.Add((photoBinFileInfo, driveFilesOfSameName?.ToArray() ?? []));
             }
         }
 
