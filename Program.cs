@@ -18,12 +18,16 @@ switch (commandType)
 
     case CommandType.FindDuplicatesWithinFolders:
         // Handle finding duplicates in individual folders
-        FindAndReportDuplicateInIndividualFolders(cachingSha256FileHasher, Path.Combine(rootFolder, @"Takeout\Drive\Office PC"));
+        FindAndReportDuplicateInIndividualFolders(
+            cachingSha256FileHasher,
+            [Path.Combine(rootFolder, @"Takeout\Drive\Office PC")]);
         break;
 
     case CommandType.FindDuplicatesAcrossFolders:
         // Handle finding duplicates across folder structures
-        FindAndReportDuplicateAcrossFolders(cachingSha256FileHasher);
+        FindAndReportDuplicateAcrossFolders(
+            cachingSha256FileHasher,
+            [Path.Combine(rootFolder, @"Takeout\Drive\Office PC")]);
         break;
 
     case CommandType.FindFilesUniqueToOneFolderStructure:
@@ -49,11 +53,14 @@ static void ExtractZipFiles(string zipFileSpec)
     zipFileExtractor.Extract();
 }
 
-static void FindAndReportDuplicateInIndividualFolders(IFileHasher fileHasher, string rootFolderPath) {
+static void FindAndReportDuplicateInIndividualFolders(
+    IFileHasher fileHasher,
+    string[] rootFolderPaths)
+{
     var duplicateFileFinder = new WithinFolderDuplicateFileFinder(
         new FileFinder(
             new FolderFinder(
-                rootFolderPath,
+                rootFolderPaths,
                 "*",
                 true),
             new ExplicitFileExcluder()),
@@ -83,15 +90,14 @@ static void FindAndReportDuplicateInIndividualFolders(IFileHasher fileHasher, st
     Console.WriteLine(report);
 }
 
-static void FindAndReportDuplicateAcrossFolders(IFileHasher fileHasher)
+static void FindAndReportDuplicateAcrossFolders(
+    IFileHasher fileHasher,
+    string[] rootFolderPaths)
 {
     var duplicateFileFinder = new AcrossFoldersDuplicateFileFinder(
         new FileFinder(
             new FolderFinder(
-                [
-                    Path.Combine(rootFolder, @"Takeout\Drive\Office PC"),
-                    @"C:\Users\windo\Downloads\Mobile Devices"
-                ],
+                rootFolderPaths,
                 "*",
                 true),
             new ExplicitFileExcluder()),
