@@ -1,10 +1,11 @@
 ﻿using System.Text;
 using DuplicateFinder;
+using DuplicateFinder.FileComparers;
 using DuplicateFinder.Files;
 using DuplicateFinder.Folders;
 using TextCopy;
 
-const string rootFolder = @"C:\Temp";
+const string rootFolder = @"G:\";
 
 var cachingSha256FileHasher = new CachingSHA256FileHasher();
 
@@ -21,6 +22,13 @@ switch (commandType)
         FindAndReportDuplicateInIndividualFolders(
             cachingSha256FileHasher,
             [Path.Combine(rootFolder, @"Takeout\Drive\Office PC")]);
+        break;
+
+    case CommandType.FindSimilarFilesWithinFolders:
+        // Handle finding similar files in individual folders
+        FindAndReportSimilarFilesInIndividualFolders(
+            cachingSha256FileHasher,
+            [Path.Combine(rootFolder, @"Other computers\Office PC")]);
         break;
 
     case CommandType.FindDuplicatesAcrossFolders:
@@ -41,7 +49,7 @@ switch (commandType)
 
 return;
 
-static CommandType GetCommandType() => CommandType.FindDuplicatesWithinFolders;
+static CommandType GetCommandType() => CommandType.FindSimilarFilesWithinFolders;
 
 static void ExtractZipFiles(string zipFileSpec)
 {
@@ -80,6 +88,43 @@ static void FindAndReportDuplicateInIndividualFolders(
             {
                 sb.AppendLine($"@ECHO ERASING {duplication.Length - 1} FILES, RETAINING \"{fileInfo.FileInfo.FullName}\"");
             }
+        }
+
+        sb.AppendLine();
+    }
+
+    var report = sb.ToString();
+    ClipboardService.SetText(report);
+    Console.WriteLine(report);
+}
+
+static void FindAndReportSimilarFilesInIndividualFolders(
+    IFileHasher fileHasher,
+    string[] rootFolderPaths)
+{
+    var similarFilesFinder = new WithinFolderSimilarFilesFinder(
+        new FileFinder(
+            new FolderFinder(
+                rootFolderPaths,
+                "*",
+                true),
+            new ExplicitFileExcluder()),
+        fileHasher);
+    var similarities = similarFilesFinder.FindSimilarFiles();
+
+    var sb = new StringBuilder("SIMILAR FILES IN INDIVIDUAL FOLDERS").AppendLine();
+    const string destinationFolderName = "SimilarFiles";
+    foreach (var similarity in similarities)
+    {
+        var directoryFullName = similarity.Item1.FileInfo.DirectoryName;
+        var destDirectoryFullName = Path.Combine(directoryFullName!, destinationFolderName);
+
+        sb.AppendLine($"IF NOT EXIST \"{destDirectoryFullName}\" MKDIR \"{destDirectoryFullName}\"");
+        sb.AppendLine($"MOVE \"{similarity.Item1.FileInfo.FullName}\" \"{destDirectoryFullName}\"");
+
+        foreach (var fileInfo in similarity.Item2)
+        {
+            sb.AppendLine($"MOVE \"{fileInfo.FileInfo.FullName}\" \"{destDirectoryFullName}\"");
         }
 
         sb.AppendLine();

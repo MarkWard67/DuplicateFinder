@@ -1,6 +1,6 @@
 ﻿using System.IO.Compression;
 
-namespace DuplicateFinder;
+namespace DuplicateFinder.Files;
 
 internal class ZipFileExtractor(
     string targetPath,

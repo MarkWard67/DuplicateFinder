@@ -1,6 +1,6 @@
 ﻿using DuplicateFinder.Files;
 
-namespace DuplicateFinder;
+namespace DuplicateFinder.FileComparers;
 
 internal class GooglePhotosBinChecker
 {
