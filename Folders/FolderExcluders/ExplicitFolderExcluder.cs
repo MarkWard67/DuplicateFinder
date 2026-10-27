@@ -1,4 +1,4 @@
-﻿namespace DuplicateFinder.Folders;
+﻿namespace DuplicateFinder.Folders.FolderExcluders;
 
 internal class ExplicitFolderExcluder(string[] excludedFolders) : IFolderExcluder
 {

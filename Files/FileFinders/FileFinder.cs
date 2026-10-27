@@ -1,6 +1,7 @@
-﻿using DuplicateFinder.Folders;
+﻿using DuplicateFinder.Files.FileExcluders;
+using DuplicateFinder.Folders.FolderFinders;
 
-namespace DuplicateFinder.Files;
+namespace DuplicateFinder.Files.FileFinders;
 
 internal class FileFinder(
     IFolderFinder folderFinder,

@@ -2,7 +2,12 @@
 using DuplicateFinder;
 using DuplicateFinder.FileComparers;
 using DuplicateFinder.Files;
+using DuplicateFinder.Files.FileExcluders;
+using DuplicateFinder.Files.FileFinders;
 using DuplicateFinder.Folders;
+using DuplicateFinder.Folders.FolderExcluders;
+using DuplicateFinder.Folders.FolderFinders;
+
 using TextCopy;
 
 const string rootFolder = @"G:\";

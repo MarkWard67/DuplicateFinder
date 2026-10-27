@@ -1,6 +1,6 @@
 ﻿using DuplicateFinder.Files;
 
-namespace DuplicateFinder.Folders;
+namespace DuplicateFinder.Folders.FolderExcluders;
 
 internal class AggregateFolderExcluder(params IEnumerable<IFolderExcluder> excluders) : IFolderExcluder
 {

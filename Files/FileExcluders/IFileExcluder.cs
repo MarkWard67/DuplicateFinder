@@ -1,4 +1,4 @@
-﻿namespace DuplicateFinder.Files;
+﻿namespace DuplicateFinder.Files.FileExcluders;
 
 internal interface IFileExcluder
 {

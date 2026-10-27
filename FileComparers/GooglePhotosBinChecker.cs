@@ -1,4 +1,5 @@
 ﻿using DuplicateFinder.Files;
+using DuplicateFinder.Files.FileFinders;
 
 namespace DuplicateFinder.FileComparers;
 

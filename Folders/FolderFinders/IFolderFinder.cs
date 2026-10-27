@@ -1,4 +1,4 @@
-﻿namespace DuplicateFinder.Folders;
+﻿namespace DuplicateFinder.Folders.FolderFinders;
 
 internal interface IFolderFinder
 {

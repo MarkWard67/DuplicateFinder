@@ -1,4 +1,6 @@
-﻿namespace DuplicateFinder.Folders;
+﻿using DuplicateFinder.Folders.FolderExcluders;
+
+namespace DuplicateFinder.Folders.FolderFinders;
 
 internal class FolderFinder(
     string[] rootFolderPaths,

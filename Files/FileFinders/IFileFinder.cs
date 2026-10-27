@@ -1,4 +1,6 @@
-﻿namespace DuplicateFinder.Files;
+﻿using DuplicateFinder.Files;
+
+namespace DuplicateFinder.Files.FileFinders;
 
 internal interface IFileFinder
 {
