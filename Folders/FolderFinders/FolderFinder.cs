@@ -16,11 +16,11 @@ internal class FolderFinder(
         string folderSpecification,
         bool recursive,
         IFolderExcluder? folderExcluder = null)
-    : this(
-        [rootFolderPath],
-        folderSpecification,
-        recursive,
-        folderExcluder)
+        : this(
+            [rootFolderPath],
+            folderSpecification,
+            recursive,
+            folderExcluder)
     {
     }
 

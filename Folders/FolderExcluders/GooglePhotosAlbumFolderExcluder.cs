@@ -1,6 +1,6 @@
 ﻿namespace DuplicateFinder.Folders.FolderExcluders;
 
-internal class GooglePhotosAlbumFolderExcluder() : IFolderExcluder
+internal class GooglePhotosAlbumFolderExcluder : IFolderExcluder
 {
     public bool ExcludeFolder(string folderFullPath)
     {

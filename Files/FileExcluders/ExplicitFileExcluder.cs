@@ -1,20 +1,11 @@
 ﻿namespace DuplicateFinder.Files.FileExcluders;
 
-internal class ExplicitFileExcluder : IFileExcluder
+internal class ExplicitFileExcluder(string[] excludedFileFullNames) : IFileExcluder
 {
-    private readonly HashSet<string>? _excludedFileFullNames;
-
-    public ExplicitFileExcluder()
-    {
-    }
-
-    public ExplicitFileExcluder(string[] excludedFileFullNames)
-    {
-        _excludedFileFullNames = excludedFileFullNames.Distinct().ToHashSet();
-    }
+    private readonly HashSet<string> _excludedFileFullNames = excludedFileFullNames.Distinct().ToHashSet();
 
     public bool ExcludeFile(FileInfo fileInfo)
     {
-        return _excludedFileFullNames?.Contains(fileInfo.FullName) == true;
+        return _excludedFileFullNames.Contains(fileInfo.FullName);
     }
 }
