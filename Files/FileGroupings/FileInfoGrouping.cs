@@ -24,6 +24,11 @@ internal record FileInfoGrouping : IFileInfoGrouping
 
     public int Count => _fileInfos.Count;
 
+    public bool ContainsAll(params IEnumerable<FileInfoWrapper> fileInfos)
+    {
+        return fileInfos.All(_fileInfos.Contains);
+    }
+
     public override string ToString()
     {
         var sb = new StringBuilder();

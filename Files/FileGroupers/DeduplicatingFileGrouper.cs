@@ -8,7 +8,10 @@ internal class DeduplicatingFileGrouper(IFileHasher fileHasher) : IFileGrouper
     {
         var fileInfoArray = fileInfos.ToArray();
 
-        if (fileInfoArray.Length < 2) return [new FileInfoGrouping(fileInfoArray)];
+        if (fileInfoArray.Length < 2)
+        {
+            return [new FileInfoGrouping(fileInfoArray)];
+        }
 
         return fileInfoArray
             .GroupBy(f => (f.FileInfo.Length, FileHash: fileHasher.ComputeFileHash(f.FileInfo.FullName)))

@@ -18,7 +18,10 @@ internal class ZipFileExtractor(
 
     public void Extract(bool overwriteFiles = false)
     {
-        if (!Directory.Exists(targetPath)) Directory.CreateDirectory(targetPath);
+        if (!Directory.Exists(targetPath))
+        {
+            Directory.CreateDirectory(targetPath);
+        }
 
         foreach (var zipFileFullName in zipFileFullNames)
         {

@@ -29,6 +29,10 @@ internal record SimilarFileInfoGrouping : IFileInfoGrouping
     }
 
     public int Count => _similarFileInfos.Count + 1;
+    public bool ContainsAll(params IEnumerable<FileInfoWrapper> fileInfos)
+    {
+        return false;
+    }
 
     public override string ToString()
     {
