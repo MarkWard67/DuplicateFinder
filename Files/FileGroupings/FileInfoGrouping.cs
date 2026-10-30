@@ -7,8 +7,11 @@ internal record FileInfoGrouping : IFileInfoGrouping
 {
     private readonly List<FileInfoWrapper> _fileInfos;
 
-    public FileInfoGrouping(IEnumerable<FileInfoWrapper> fileInfos)
+    public FileInfoGrouping(
+        IEnumerable<FileInfoWrapper> fileInfos,
+        FileInfoGroupingKey? key)
     {
+        Key = key;
         _fileInfos = [.. fileInfos];
     }
 
@@ -29,11 +32,16 @@ internal record FileInfoGrouping : IFileInfoGrouping
         return fileInfos.All(_fileInfos.Contains);
     }
 
+    public FileInfoGroupingKey? Key { get; }
+
     public override string ToString()
     {
-        var sb = new StringBuilder();
+        var sb = new StringBuilder($"{Key}").AppendLine();
 
-        foreach (var fileInfo in _fileInfos) sb.AppendLine(fileInfo.FileInfo.FullName);
+        foreach (var fileInfo in _fileInfos)
+        {
+            sb.AppendLine(fileInfo.FileInfo.FullName);
+        }
 
         return sb.ToString();
     }

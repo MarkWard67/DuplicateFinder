@@ -4,7 +4,7 @@ using ImageMagick;
 
 namespace DuplicateFinder;
 
-internal class ImageComparer(IFileHasher fileHasher) : IDisposable
+internal class ImageMagickImageComparer(IFileHasher fileHasher, double maxDistortion) : IImageComparer
 {
     private readonly ConcurrentDictionary<string, MagickImage> _imageCache = new();
 
@@ -15,6 +15,11 @@ internal class ImageComparer(IFileHasher fileHasher) : IDisposable
 
     public bool Compare(string image1FullName, string image2FullName)
     {
+        if (image1FullName == image2FullName)
+        {
+            return true;
+        }
+
         var hash1 = fileHasher.ComputeFileHash(image1FullName);
         var hash2 = fileHasher.ComputeFileHash(image2FullName);
         if (hash1.Equals(hash2))
@@ -48,7 +53,7 @@ internal class ImageComparer(IFileHasher fileHasher) : IDisposable
                 ErrorMetric.Absolute,
                 Channels.Red | Channels.Green | Channels.Blue | Channels.Alpha);
 
-            return distortion < 1e-9;
+            return distortion < maxDistortion;
         }
         catch (MagickErrorException)
         {

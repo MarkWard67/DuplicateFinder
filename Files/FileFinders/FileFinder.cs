@@ -21,4 +21,9 @@ internal class FileFinder(
             .Select(f => new FileInfoWrapper(f))
             .ToArray();
     }
+
+    public void Dispose()
+    {
+        // TODO release managed resources here
+    }
 }

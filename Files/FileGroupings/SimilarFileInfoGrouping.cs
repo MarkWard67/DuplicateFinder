@@ -1,44 +1,24 @@
-﻿using System.Collections;
-using System.Text;
+﻿using System.Text;
 
 namespace DuplicateFinder.Files.FileGroupings;
 
-internal record SimilarFileInfoGrouping : IFileInfoGrouping
+internal record SimilarFileInfoGrouping : FileInfoGrouping
 {
-    private readonly FileInfoWrapper _baseFileInfo;
-    private readonly List<FileInfoWrapper> _similarFileInfos;
-
     public SimilarFileInfoGrouping(
-        FileInfoWrapper baseFileInfo,
-        IEnumerable<FileInfoWrapper> similarFileInfos)
+        IEnumerable<FileInfoWrapper> fileInfos,
+        FileInfoGroupingKey key)
+        : base(fileInfos, key)
     {
-        _baseFileInfo = baseFileInfo;
-        _similarFileInfos = similarFileInfos.ToList();
-    }
-
-    public IEnumerator<FileInfoWrapper> GetEnumerator()
-    {
-        yield return _baseFileInfo;
-
-        foreach (var similarFileInfo in _similarFileInfos) yield return similarFileInfo;
-    }
-
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
-    }
-
-    public int Count => _similarFileInfos.Count + 1;
-    public bool ContainsAll(params IEnumerable<FileInfoWrapper> fileInfos)
-    {
-        return false;
     }
 
     public override string ToString()
     {
-        var sb = new StringBuilder($"Similar to {_baseFileInfo.FileInfo.FullName}:").AppendLine();
+        var sb = new StringBuilder($"Similar ({Key})").AppendLine();
 
-        foreach (var fileInfo in _similarFileInfos) sb.AppendLine($"\t{fileInfo.FileInfo.FullName}");
+        foreach (var fileInfo in this)
+        {
+            sb.AppendLine($"\t{fileInfo.FileInfo.FullName}");
+        }
 
         return sb.ToString();
     }

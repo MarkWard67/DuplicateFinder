@@ -24,9 +24,6 @@ internal abstract class FileGroupingReporter(
         var fileInfos = fileFinder.FindFiles();
         var fileGroups = fileGrouper.GroupFiles(fileInfos);
 
-        var similarFiles = fileGroups
-            .Where(x => x.Count > 1);
-
-        return similarFiles;
+        return fileGroups;
     }
 }

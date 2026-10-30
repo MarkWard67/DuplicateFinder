@@ -1,6 +1,6 @@
 ﻿namespace DuplicateFinder.Files.FileFinders;
 
-internal interface IFileFinder
+internal interface IFileFinder : IDisposable
 {
     FileInfoWrapper[] FindFiles(
         bool recursive = false,

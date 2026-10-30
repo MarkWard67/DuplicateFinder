@@ -1,6 +1,7 @@
 ﻿using DuplicateFinder.Files;
 using DuplicateFinder.Files.FileFinders;
 using DuplicateFinder.Files.FileGroupers;
+using DuplicateFinder.Files.FileGroupings;
 
 namespace DuplicateFinder.FileGroupingReporters;
 
@@ -10,5 +11,7 @@ internal class DuplicatesFileGroupingReporter(
     IFileHasher fileHasher) : FileGroupingReporter(
     fileFinder,
     new AggregateFileGrouper(
+        IdenticalFileInfoGroupingFactory.Instance,
         fileGrouper,
-        new DeduplicatingFileGrouper(fileHasher)));
+        FileLengthFileGrouper.Instance,
+        new FileHashFileGrouper(fileHasher)));
