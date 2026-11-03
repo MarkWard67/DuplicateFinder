@@ -3,6 +3,6 @@
 internal interface IFileInfoGroupingFactory
 {
     IFileInfoGrouping CreateFileInfoGrouping(
-        IEnumerable<FileInfoWrapper> fileInfos,
+        IEnumerable<FileInfo> fileInfos,
         FileInfoGroupingKey? key = null);
 }

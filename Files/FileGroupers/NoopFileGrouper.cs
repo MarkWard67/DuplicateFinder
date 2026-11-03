@@ -11,7 +11,7 @@ internal class NoopFileGrouper : IFileGrouper
     public static NoopFileGrouper Instance = new();
 
     public IEnumerable<IFileInfoGrouping> GroupFiles(
-        IEnumerable<FileInfoWrapper> fileInfos,
+        IEnumerable<FileInfo> fileInfos,
         FileInfoGroupingKey? key = null)
     {
         return GroupFiles(
@@ -21,7 +21,7 @@ internal class NoopFileGrouper : IFileGrouper
     }
 
     public IEnumerable<IFileInfoGrouping> GroupFiles(
-        IEnumerable<FileInfoWrapper> fileInfos,
+        IEnumerable<FileInfo> fileInfos,
         IFileInfoGroupingFactory groupingFactory,
         FileInfoGroupingKey? key = null)
     {

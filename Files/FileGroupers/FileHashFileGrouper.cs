@@ -5,7 +5,7 @@ namespace DuplicateFinder.Files.FileGroupers;
 internal class FileHashFileGrouper(IFileHasher fileHasher) : IFileGrouper
 {
     public IEnumerable<IFileInfoGrouping> GroupFiles(
-        IEnumerable<FileInfoWrapper> fileInfos,
+        IEnumerable<FileInfo> fileInfos,
         FileInfoGroupingKey? key = null)
     {
         return GroupFiles(
@@ -14,7 +14,7 @@ internal class FileHashFileGrouper(IFileHasher fileHasher) : IFileGrouper
             key);
     }
 
-    public IEnumerable<IFileInfoGrouping> GroupFiles(IEnumerable<FileInfoWrapper> fileInfos, IFileInfoGroupingFactory groupingFactory,
+    public IEnumerable<IFileInfoGrouping> GroupFiles(IEnumerable<FileInfo> fileInfos, IFileInfoGroupingFactory groupingFactory,
         FileInfoGroupingKey? key = null)
     {
         var fileInfoArray = fileInfos.ToArray();
@@ -25,7 +25,7 @@ internal class FileHashFileGrouper(IFileHasher fileHasher) : IFileGrouper
         }
 
         var result = fileInfoArray
-            .GroupBy(f => fileHasher.ComputeFileHash(f.FileInfo.FullName))
+            .GroupBy(f => fileHasher.ComputeFileHash(f.FullName))
             .Select(g => groupingFactory.CreateFileInfoGrouping(
                 g,
                 FileInfoGroupingKey.Extend(key, g.Key)))

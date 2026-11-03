@@ -5,7 +5,7 @@ namespace DuplicateFinder.Files.FileGroupers;
 internal class DirectoryNameFileGrouper : IFileGrouper
 {
     public IEnumerable<IFileInfoGrouping> GroupFiles(
-        IEnumerable<FileInfoWrapper> fileInfos,
+        IEnumerable<FileInfo> fileInfos,
         FileInfoGroupingKey? key = null)
     {
         return GroupFiles(
@@ -14,11 +14,11 @@ internal class DirectoryNameFileGrouper : IFileGrouper
             key);
     }
 
-    public IEnumerable<IFileInfoGrouping> GroupFiles(IEnumerable<FileInfoWrapper> fileInfos, IFileInfoGroupingFactory groupingFactory,
+    public IEnumerable<IFileInfoGrouping> GroupFiles(IEnumerable<FileInfo> fileInfos, IFileInfoGroupingFactory groupingFactory,
         FileInfoGroupingKey? key = null)
     {
         var result = fileInfos
-            .GroupBy(f => f.FileInfo.DirectoryName)
+            .GroupBy(f => f.DirectoryName)
             .Select(g => new FileInfoGrouping(
                 g,
                 FileInfoGroupingKey.Extend(key, g.Key)))

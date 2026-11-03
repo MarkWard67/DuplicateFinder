@@ -5,7 +5,7 @@ namespace DuplicateFinder.Files;
 
 internal abstract class CachingFileHasher : FileHasher, ICachingFileHasher
 {
-    private readonly ConcurrentDictionary<string, string> _cache = new();
+    private readonly ConcurrentDictionary<string, string> _cache = new(13001, [], StringComparer.OrdinalIgnoreCase);
 
     protected CachingFileHasher(HashAlgorithm hashAlgorithm)
         : base(hashAlgorithm)
@@ -25,5 +25,18 @@ internal abstract class CachingFileHasher : FileHasher, ICachingFileHasher
     public bool ConfirmCache(string[] expectedKeys)
     {
         return expectedKeys.All(x => _cache.ContainsKey(x));
+    }
+
+    public override void Clear()
+    {
+        ClearCache();
+    }
+
+    public override void ClearIf(int maximumItems)
+    {
+        if (_cache.Count > maximumItems)
+        {
+            Clear();
+        }
     }
 }

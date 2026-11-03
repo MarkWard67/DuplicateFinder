@@ -8,7 +8,7 @@ internal class FileFinder(
     IFileExcluder? fileExcluder = null)
     : IFileFinder
 {
-    public FileInfoWrapper[] FindFiles(
+    public FileInfo[] FindFiles(
         bool recursive = false,
         string fileSpecification = "*")
     {
@@ -16,9 +16,9 @@ internal class FileFinder(
 
         return folders
             .SelectMany(dir => dir.GetFiles(fileSpecification, SearchOption.TopDirectoryOnly))
-            .Where(f => !f.Attributes.HasFlag(FileAttributes.Directory) && (
-                fileExcluder == null || !fileExcluder.ExcludeFile(f)))
-            .Select(f => new FileInfoWrapper(f))
+            .Where(f => !f.Attributes.HasFlag(FileAttributes.Directory)
+                        && (fileExcluder == null || !fileExcluder.ExcludeFile(f)))
+            .OrderBy(x => x.FullName)
             .ToArray();
     }
 

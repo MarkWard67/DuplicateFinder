@@ -9,7 +9,7 @@ internal class FileInfoGroupingFactory : IFileInfoGroupingFactory
     }
 
     public IFileInfoGrouping CreateFileInfoGrouping(
-        IEnumerable<FileInfoWrapper> fileInfos,
+        IEnumerable<FileInfo> fileInfos,
         FileInfoGroupingKey? key = null)
     {
         return new FileInfoGrouping(fileInfos, key);

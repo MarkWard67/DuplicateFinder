@@ -11,7 +11,7 @@ internal class FileLengthFileGrouper : IFileGrouper
     public static FileLengthFileGrouper Instance = new();
 
     public IEnumerable<IFileInfoGrouping> GroupFiles(
-        IEnumerable<FileInfoWrapper> fileInfos,
+        IEnumerable<FileInfo> fileInfos,
         FileInfoGroupingKey? key = null)
     {
         return GroupFiles(
@@ -21,12 +21,12 @@ internal class FileLengthFileGrouper : IFileGrouper
     }
 
     public IEnumerable<IFileInfoGrouping> GroupFiles(
-        IEnumerable<FileInfoWrapper> fileInfos,
+        IEnumerable<FileInfo> fileInfos,
         IFileInfoGroupingFactory groupingFactory,
         FileInfoGroupingKey? key = null)
     {
         var result = fileInfos
-            .GroupBy(f => f.FileInfo.Length)
+            .GroupBy(f => f.Length)
             .Select(g => groupingFactory.CreateFileInfoGrouping(
                 g,
                 FileInfoGroupingKey.Extend(key, g.Key)))

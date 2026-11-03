@@ -7,11 +7,18 @@ namespace DuplicateFinder.FileGroupingReporters;
 
 internal class DuplicatesFileGroupingReporter(
     IFileFinder fileFinder,
-    IFileGrouper fileGrouper,
+    IFileGrouper outermostFileGrouper,
     IFileHasher fileHasher) : FileGroupingReporter(
     fileFinder,
     new AggregateFileGrouper(
         IdenticalFileInfoGroupingFactory.Instance,
-        fileGrouper,
+        outermostFileGrouper,
         FileLengthFileGrouper.Instance,
-        new FileHashFileGrouper(fileHasher)));
+        new FileHashFileGrouper(fileHasher)))
+{
+    protected override IEnumerable<IFileInfoGrouping> GroupFiles()
+    {
+        var result = base.GroupFiles();
+        return result.Where(x => x.Count > 1);
+    }
+}

@@ -15,7 +15,7 @@ var commandType = GetCommandType();
 var cachingSha256FileHasher = new CachingSHA256FileHasher();
 IFileGroupingReporter? reporter = null;
 
-using (var imageComparer = new ImageMagickImageComparer(cachingSha256FileHasher, 1e-4))
+using (var imageComparer = new ImageMagickImageComparer(1e-4))
 {
     switch (commandType)
     {
@@ -35,7 +35,7 @@ using (var imageComparer = new ImageMagickImageComparer(cachingSha256FileHasher,
             reporter = FindAndReportSimilarFilesInIndividualFolders(
                 cachingSha256FileHasher,
                 imageComparer,
-                [Path.Combine(rootFolder, @"G:\Other computers\Office PC\Photos\4 st leonards close")]);
+                [Path.Combine(rootFolder, @"Other computers\Office PC")]);
             break;
 
         case CommandType.FindDuplicatesAcrossFolders:
@@ -58,6 +58,9 @@ using (var imageComparer = new ImageMagickImageComparer(cachingSha256FileHasher,
     }
 }
 
+reporter?.SubReportAvailable += OnSubReportAvailable;
+reporter?.ProgressUpdate += OnProgressUpdate;
+
 var report = reporter?.Report();
 if (report == null)
 {
@@ -70,9 +73,37 @@ Console.WriteLine(report);
 
 return 0;
 
+static void OnSubReportAvailable(object? sender, SubReportEventArgs e)
+{
+    var color = Console.ForegroundColor;
+    try
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine(e.SubReport);
+    }
+    finally
+    {
+        Console.ForegroundColor = color;
+    }
+}
+
+static void OnProgressUpdate(object? sender, string e)
+{
+    var color = Console.ForegroundColor;
+    try
+    {
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine(e);
+    }
+    finally
+    {
+        Console.ForegroundColor = color;
+    }
+}
+
 static CommandType GetCommandType()
 {
-    return CommandType.FindSimilarFilesWithinFolders;
+    return CommandType.FindSimilarFilesAcrossFolders;
 }
 
 static void ExtractZipFiles(string zipFileSpec)

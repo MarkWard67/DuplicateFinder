@@ -5,7 +5,7 @@ namespace DuplicateFinder.Files.FileGroupings;
 internal record SimilarFileInfoGrouping : FileInfoGrouping
 {
     public SimilarFileInfoGrouping(
-        IEnumerable<FileInfoWrapper> fileInfos,
+        IEnumerable<FileInfo> fileInfos,
         FileInfoGroupingKey key)
         : base(fileInfos, key)
     {
@@ -15,9 +15,10 @@ internal record SimilarFileInfoGrouping : FileInfoGrouping
     {
         var sb = new StringBuilder($"Similar ({Key})").AppendLine();
 
-        foreach (var fileInfo in this)
+        var i = 1;
+        foreach (var fileInfo in this.OrderBy(x => x.Length).ThenBy(x => x.FullName.Length))
         {
-            sb.AppendLine($"\t{fileInfo.FileInfo.FullName}");
+            sb.AppendLine($"{i++}.\t{fileInfo.FullName}");
         }
 
         return sb.ToString();

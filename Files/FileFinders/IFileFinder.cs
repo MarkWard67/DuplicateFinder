@@ -2,7 +2,7 @@
 
 internal interface IFileFinder : IDisposable
 {
-    FileInfoWrapper[] FindFiles(
+    FileInfo[] FindFiles(
         bool recursive = false,
         string fileSpecification = "*");
 }

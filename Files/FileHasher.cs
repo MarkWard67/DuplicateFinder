@@ -31,4 +31,7 @@ internal abstract class FileHasher(HashAlgorithm hashAlgorithm) : IFileHasher
             File.SetLastAccessTimeUtc(fileFullName, lastAccessTime);
         }
     }
+
+    public abstract void Clear();
+    public abstract void ClearIf(int maximumItems);
 }

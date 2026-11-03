@@ -5,17 +5,17 @@ namespace DuplicateFinder.Files.FileGroupings;
 
 internal record FileInfoGrouping : IFileInfoGrouping
 {
-    private readonly List<FileInfoWrapper> _fileInfos;
+    private readonly List<FileInfo> _fileInfos;
 
     public FileInfoGrouping(
-        IEnumerable<FileInfoWrapper> fileInfos,
+        IEnumerable<FileInfo> fileInfos,
         FileInfoGroupingKey? key)
     {
         Key = key;
         _fileInfos = [.. fileInfos];
     }
 
-    public IEnumerator<FileInfoWrapper> GetEnumerator()
+    public IEnumerator<FileInfo> GetEnumerator()
     {
         return _fileInfos.GetEnumerator();
     }
@@ -27,7 +27,7 @@ internal record FileInfoGrouping : IFileInfoGrouping
 
     public int Count => _fileInfos.Count;
 
-    public bool ContainsAll(params IEnumerable<FileInfoWrapper> fileInfos)
+    public bool ContainsAll(params IEnumerable<FileInfo> fileInfos)
     {
         return fileInfos.All(_fileInfos.Contains);
     }
@@ -40,7 +40,7 @@ internal record FileInfoGrouping : IFileInfoGrouping
 
         foreach (var fileInfo in _fileInfos)
         {
-            sb.AppendLine(fileInfo.FileInfo.FullName);
+            sb.AppendLine(fileInfo.FullName);
         }
 
         return sb.ToString();
