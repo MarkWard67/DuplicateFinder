@@ -1,11 +1,13 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Collections.Concurrent;
+using DuplicateFinder.FilePairers;
 using DuplicateFinder.Files.FileGroupings;
 
 namespace DuplicateFinder.Files.FileGroupers;
 
-internal partial class SimilarImagesFileGrouper(
+internal class SimilarImagesFileGrouper(
     IFileHasher fileHasher,
-    IImageComparer imageComparer) : ISlowFileGrouper
+    IImageComparer imageComparer,
+    IFilePairer filePairer) : ISlowFileGrouper
 {
     private readonly AggregateFileGrouper _duplicateFileGrouper = new(
         IdenticalFileInfoGroupingFactory.Instance,
@@ -41,54 +43,25 @@ internal partial class SimilarImagesFileGrouper(
             .ToArray();
 
         // Consider only one of each duplicate group as considering all is a waste of effort
-        var filesToIgnore = duplicates
+        var filesToIgnore = new ConcurrentDictionary<string, byte>(duplicates
             .Select(x => x.First().FullName)
             .Distinct()
-            .ToHashSet();
+            .Select(x => new KeyValuePair<string, byte>(x, 0)));
 
-        var pairings = new List<(FileInfo, FileInfo[])>();
-        for (var i = 0; i < fileInfoArray.Length - 1; i++)
-        {
-            var fileInfoI = fileInfoArray[i];
-            //////////RaiseProgressUpdate($"Seeking potential pairing for file {i} of {fileInfoArray.Length} ({fileInfoI.FullName}");
-            var fileBaseNameI = GetBaseFileName(fileInfoI);
-
-            List<(FileInfo, bool)> shouldPairWith = [];
-
-            for (var j = i + 1; j < fileInfoArray.Length; j++)
-            {
-                var fileInfoJ = fileInfoArray[j];
-                var fileBaseNameJ = GetBaseFileName(fileInfoJ);
-                if (fileBaseNameI.Equals(fileBaseNameJ, StringComparison.OrdinalIgnoreCase))
-                {
-                    shouldPairWith.Add((fileInfoJ, true));
-                }
-                else if (fileBaseNameI.Length > 3 && fileBaseNameJ.Length > 3 && NamesAreSimilarButNotIdentical(fileBaseNameI, fileBaseNameJ))
-                {
-                    shouldPairWith.Add((fileInfoJ, false));
-                }
-            }
-
-            if (shouldPairWith.Count > 0)
-            {
-                pairings.Add((
-                    fileInfoI,
-                    shouldPairWith
-                        .OrderByDescending(x => x.Item2)
-                        .Select(x => x.Item1)
-                        .ToArray()));
-            }
-        }
+        var pairings = filePairer
+            .PairFiles(fileInfoArray)
+            .OrderByDescending(x => x.PairedFileInfos.Length)
+            .ToArray();
 
         RaiseFileGroupingHits(duplicates);
 
-        if (pairings.Count == 0)
+        if (pairings.Length == 0)
         {
             return duplicates.ToArray();
         }
-        
+
         var result = new List<IFileInfoGrouping>(duplicates);
-        int pairingIndex = 0;
+        var pairingIndex = 0;
         foreach (var (fileInfo1, potentialFileInfo2) in pairings)
         {
             var similarities = new List<(FileInfo, FileInfo)>();
@@ -96,43 +69,50 @@ internal partial class SimilarImagesFileGrouper(
             pairingIndex++;
             if (pairingIndex % 10 == 0)
             {
-                RaiseProgressUpdate($"\tPairing {pairingIndex} of {pairings.Count}");
+                RaiseProgressUpdate($"Pairing {pairingIndex} of {pairings.Length}");
             }
 
-            if (filesToIgnore.Contains(fileInfo1.FullName))
+            if (filesToIgnore.ContainsKey(fileInfo1.FullName))
             {
                 continue;
             }
 
-            foreach (var fileInfo2 in potentialFileInfo2)
+            var cancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = cancellationTokenSource.Token;
+
+            var similarFiles =
+                potentialFileInfo2.AsParallel()
+                    .WithDegreeOfParallelism(5)
+                    .Select(f =>
+                    {
+                        if (cancellationToken.IsCancellationRequested || filesToIgnore.ContainsKey(f.FullName))
+                        {
+                            return (f, false);
+                        }
+
+                        // More work, but prevents memory leaks when comparing many images. The image comparer and file hasher cache images and hashes, which can consume a lot of memory.
+                        fileHasher.ClearIf(20000);
+                        imageComparer.ClearIf(50);
+
+                        return (f, imageComparer.Compare(fileInfo1.FullName, f.FullName));
+                    })
+                    .Where(x => x.Item2)
+                    .Select(x => x.f)
+                    .ToArray();
+
+            if (similarFiles.Length > 0)
             {
-                if (filesToIgnore.Contains(fileInfo2.FullName))
-                {
-                    continue;
-                }
+                filesToIgnore.AddOrUpdate(fileInfo1.FullName, _ => 0, (_, _) => 0);
+            }
 
-                // More work, but prevents memory leaks when comparing many images. The image comparer and file hasher cache images and hashes, which can consume a lot of memory.
-                imageComparer.ClearIf(50);
-                fileHasher.ClearIf(20000);
-
-                var isMatch = imageComparer.Compare(
-                    fileInfo1.FullName,
-                    fileInfo2.FullName);
-                if (!isMatch)
-                {
-                    continue;
-                }
-
-                // Add both files to the ignore list to reduce work. We can always re-run after dealing with duplicates/similar files to find more similar files.
-                // We don't need to consider all of them at once.
-                filesToIgnore.Add(fileInfo1.FullName);
-                filesToIgnore.Add(fileInfo2.FullName);
-                similarities.Add((fileInfo1, fileInfo2));
+            foreach (var similarFile in similarFiles)
+            {
+                filesToIgnore.AddOrUpdate(similarFile.FullName, _ => 0, (_, _) => 0);
+                similarities.Add((fileInfo1, similarFile));
                 RaiseFileGroupingHit(
                     groupingFactory.CreateFileInfoGrouping(
-                        [fileInfo1, fileInfo2],
+                        [fileInfo1, similarFile],
                         FileInfoGroupingKey.Extend(key, fileInfo1.Name)));
-                break;
             }
 
             result.AddRange(
@@ -150,83 +130,6 @@ internal partial class SimilarImagesFileGrouper(
         RaiseProgressUpdate($"Ending similar images analysis for grouping {key?.ToString() ?? "unnamed"}...");
         return result.ToArray();
     }
-
-    private static string GetBaseFileName(FileInfo fileInfo)
-    {
-        var fileName = fileInfo.Extension == "" ? fileInfo.Name : fileInfo.Name.Replace(fileInfo.Extension, "");
-        fileName = ParenthesizedNumbersRegex().Replace(fileName, "");
-        return fileName;
-    }
-
-    private static bool NamesAreSimilarButNotIdentical(string fileBaseName1, string fileBaseName2)
-    {
-        return HaveSimilarNames(); // || (HaveSameExtension() && HaveSimilarLength());
-
-        bool HaveSimilarNames()
-        {
-            if (fileBaseName1.Equals(fileBaseName2, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            if (fileBaseName1.Contains(fileBaseName2, StringComparison.OrdinalIgnoreCase) ||
-                fileBaseName2.Contains(fileBaseName1, StringComparison.OrdinalIgnoreCase))
-            {
-                return IsMatch(fileBaseName1, fileBaseName2);
-            }
-
-            return false;
-        }
-
-        static bool IsMatch(string name1, string name2)
-        {
-            var regex1 = IsMatchRegex(name1);
-            if (regex1.IsMatch(name2))
-            {
-                return true;
-            }
-
-            var regex2 = IsMatchRegex(name2);
-            return regex2.IsMatch(name1);
-        }
-
-        static Regex IsMatchRegex(string fileBaseName)
-        {
-            return new Regex($"^{fileBaseName}[_. ]+", RegexOptions.IgnoreCase);
-        }
-
-        //////////static long[] GetNumbersFromFileName(FileInfo fileInfo)
-        //////////{
-        //////////    return NumberRegex()
-        //////////        .Matches(fileInfo.Name)
-        //////////        .Select(m => long.Parse(m.Value, CultureInfo.InvariantCulture))
-        //////////        .ToArray();
-        //////////}
-
-        //////////bool HaveSameExtension()
-        //////////{
-        //////////    return fileInfo2.Extension == "" ||
-        //////////           fileInfo1.Extension.Equals(fileInfo2.Extension, StringComparison.OrdinalIgnoreCase);
-        //////////}
-
-        //////////bool HaveSimilarLength()
-        //////////{
-        //////////    if (fileInfo1.Length == fileInfo2.Length)
-        //////////    {
-        //////////        return true;
-        //////////    }
-
-        //////////    var difference = Math.Abs(fileInfo1.Length - fileInfo2.Length);
-        //////////    var tolerance = Math.Max(fileInfo1.Length, fileInfo2.Length) * lengthTolerancePercent / 100;
-        //////////    return difference <= tolerance;
-        //////////}
-    }
-
-    //////////[GeneratedRegex(@"\d{2,}")]
-    //////////private static partial Regex NumberRegex();
-
-    [GeneratedRegex(@"\s*[(]\d+[)]")]
-    private static partial Regex ParenthesizedNumbersRegex();
 
     public event EventHandler<FileGroupingHitEventArgs>? FileGroupingHit;
     public event EventHandler<string>? ProgressUpdate;

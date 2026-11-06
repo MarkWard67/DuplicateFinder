@@ -7,7 +7,8 @@ internal class AggregateFileGrouper : ISlowFileGrouper
     private readonly IFileInfoGroupingFactory _groupingFactory;
     private readonly IFileGrouper[] _fileGroupers;
 
-    public AggregateFileGrouper(IFileInfoGroupingFactory groupingFactory,
+    public AggregateFileGrouper(
+        IFileInfoGroupingFactory groupingFactory,
         params IFileGrouper[] fileGroupers)
     {
         _groupingFactory = groupingFactory;

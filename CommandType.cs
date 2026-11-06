@@ -6,5 +6,7 @@ internal enum CommandType
     FindDuplicatesWithinFolders,
     FindSimilarFilesWithinFolders,
     FindDuplicatesAcrossFolders,
-    FindSimilarFilesAcrossFolders
+    FindSimilarFilesAcrossFolders,
+
+    DeleteSimilarFilesWithinSpecificFolders
 }

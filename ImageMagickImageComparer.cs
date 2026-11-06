@@ -14,7 +14,13 @@ internal class ImageMagickImageComparer(double maxDistortion) : IImageComparer
 
     private void DisposeCachedImages()
     {
-        foreach (var kvp in _imageCache) kvp.Value.Dispose();
+        var imagesToDispose = _imageCache.Values.ToArray();
+        _imageCache.Clear();
+
+        foreach (var image in imagesToDispose)
+        {
+            image.Dispose();
+        }
     }
 
     public bool Compare(string image1FullName, string image2FullName)
@@ -24,24 +30,19 @@ internal class ImageMagickImageComparer(double maxDistortion) : IImageComparer
             return true;
         }
 
+        MagickImage? image1 = null;
+        MagickImage? image2 = null;
+
         try
         {
-            //////////var extension1 = Path.GetExtension(image1FullName);
-            //////////var extension2 = Path.GetExtension(image2FullName);
-            //////////if (extension1 == "" || extension2 == "" ||
-            //////////    !extension1.Equals(extension2, StringComparison.OrdinalIgnoreCase))
-            //////////{
-            //////////    return false;
-            //////////}
-
-            var image1 = GetOrCreateImage(image1FullName);
+            image1 = GetOrCreateImage(image1FullName);
             image1.ColorFuzz = new Percentage(5);
 
-            var image2 = GetOrCreateImage(image2FullName);
+            image2 = GetOrCreateImage(image2FullName);
             image2.ColorFuzz = new Percentage(5);
 
             const Channels comparisonChannels = Channels.Red | Channels.Green | Channels.Blue | Channels.Alpha;
-            const ErrorMetric comparisonErrorMetric = ErrorMetric.Absolute;
+            const ErrorMetric comparisonErrorMetric = ErrorMetric.MeanAbsolute;
 
             List<int> rotationAngles = [];
 
@@ -82,11 +83,15 @@ internal class ImageMagickImageComparer(double maxDistortion) : IImageComparer
         {
             return false;
         }
+        finally
+        {
+            CacheImages(image1, image2);
+        }
     }
 
     public void Clear()
     {
-        _imageCache.Clear();
+        ClearIf(0);
     }
 
     public void ClearIf(int maximumItems)
@@ -102,6 +107,21 @@ internal class ImageMagickImageComparer(double maxDistortion) : IImageComparer
 
     private MagickImage GetOrCreateImage(string imageFullName)
     {
-        return _imageCache.GetOrAdd(imageFullName, path => new MagickImage(path));
+        // If there is an image cached under this key, remove it from the cache and return it. Otherwise, create a new MagickImage instance.
+        return _imageCache.Remove(imageFullName, out var image) ? image : new MagickImage(imageFullName);
     }
+
+    private void CacheImages(params IEnumerable<MagickImage?> images)
+    {
+        foreach (var image in images)
+        {
+            if (image is null)
+            {
+                continue;
+            }
+
+            _imageCache.TryAdd(image.FileName!, image);
+        }
+    }
+
 }

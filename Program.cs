@@ -1,11 +1,13 @@
 ﻿using DuplicateFinder;
 using DuplicateFinder.FileGroupingReporters;
+using DuplicateFinder.FilePairers;
 using DuplicateFinder.Files;
 using DuplicateFinder.Files.FileExcluders;
 using DuplicateFinder.Files.FileFinders;
 using DuplicateFinder.Files.FileGroupers;
 using DuplicateFinder.Folders;
 using DuplicateFinder.Folders.FolderFinders;
+using DuplicateFinder.Reporters;
 using TextCopy;
 
 const string rootFolder = @"G:\";
@@ -13,49 +15,76 @@ const string rootFolder = @"G:\";
 var commandType = GetCommandType();
 
 var cachingSha256FileHasher = new CachingSHA256FileHasher();
+var filePairer = SimilarFilesFilePairer.Instance;
 IFileGroupingReporter? reporter = null;
 
-using (var imageComparer = new ImageMagickImageComparer(1e-4))
+using var imageComparer = new ImageMagickImageComparer(1e-2);
+
+// PerceptualHash comparison gives a very low value but is VERY slow
+// Use this is certain very specific situations e.g. different sizes but 'same' aspect ratio? Or exactly the same file name?
+    var xxx = imageComparer.Compare(
+    @"G:\Other computers\Office PC\Photos\From Google Photos 20261001\2016-02-21 12-19.jpg",
+    @"G:\Other computers\Office PC\Photos\Places\UK\Salisbury\2016-02-21 12-19.jpg");
+
+switch (commandType)
 {
-    switch (commandType)
-    {
-        case CommandType.ExtractZipFiles:
-            ExtractZipFiles("takeout-20261008*.zip");
-            break;
+    case CommandType.ExtractZipFiles:
+        ExtractZipFiles("takeout-20261008*.zip");
+        break;
 
-        case CommandType.FindDuplicatesWithinFolders:
-            // Handle finding duplicates in individual folders
-            reporter = FindAndReportDuplicatesWithinFolders(
-                cachingSha256FileHasher,
-                [Path.Combine(rootFolder, @"Other computers\Office PC")]);
-            break;
+    case CommandType.FindDuplicatesWithinFolders:
+        // Handle finding duplicates in individual folders
+        reporter = FindAndReportDuplicatesWithinFolders(
+            cachingSha256FileHasher,
+            [Path.Combine(rootFolder, @"Other computers\Office PC")],
+            DefaultReporter.Instance);
+        break;
 
-        case CommandType.FindSimilarFilesWithinFolders:
-            // Handle finding similar files in individual folders
-            reporter = FindAndReportSimilarFilesInIndividualFolders(
-                cachingSha256FileHasher,
-                imageComparer,
-                [Path.Combine(rootFolder, @"Other computers\Office PC")]);
-            break;
+    case CommandType.FindSimilarFilesWithinFolders:
+        // Handle finding similar files in individual folders
+        reporter = FindAndReportSimilarFilesInIndividualFolders(
+            cachingSha256FileHasher,
+            imageComparer,
+            [Path.Combine(rootFolder, @"Other computers\Office PC")],
+            DefaultReporter.Instance,
+            filePairer);
+        break;
 
-        case CommandType.FindDuplicatesAcrossFolders:
-            // Handle finding duplicates across folder structures
-            reporter = FindAndReportDuplicateAcrossFolders(
-                cachingSha256FileHasher,
-                [Path.Combine(rootFolder, @"Other computers\Office PC")]);
-            break;
+    case CommandType.FindDuplicatesAcrossFolders:
+        // Handle finding duplicates across folder structures
+        reporter = FindAndReportDuplicateAcrossFolders(
+            cachingSha256FileHasher,
+            [Path.Combine(rootFolder, @"Other computers\Office PC")],
+            DefaultReporter.Instance);
+        break;
 
-        case CommandType.FindSimilarFilesAcrossFolders:
-            // Handle finding similar files across folder structures
-            reporter = FindAndReportSimilarFilesAcrossFolders(
-                cachingSha256FileHasher,
-                imageComparer,
-                [Path.Combine(rootFolder, @"Other computers\Office PC")]);
-            break;
+    case CommandType.FindSimilarFilesAcrossFolders:
+        // Handle finding similar files across folder structures
+        reporter = FindAndReportSimilarFilesAcrossFolders(
+            cachingSha256FileHasher,
+            imageComparer,
+            [Path.Combine(rootFolder, @"Other computers\Office PC")],
+            DefaultReporter.Instance,
+            filePairer);
+        break;
 
-        default:
-            throw new ArgumentOutOfRangeException();
-    }
+    case CommandType.DeleteSimilarFilesWithinSpecificFolders:
+        // Delete duplicate files and similar files within specific folders
+        // If the files to which they are similar are in a different folder.
+        reporter = FindAndReportSimilarFilesAcrossFolders(
+            cachingSha256FileHasher,
+            imageComparer,
+            [Path.Combine(rootFolder, @"Other computers\Office PC")],
+            new EraseFilesReporter(
+                Path.Combine(rootFolder, @"Other computers\Office PC\Photos\From Google Photos 20261001"),
+                Path.Combine(rootFolder, @"Other computers\Office PC\Photos\__MISCELLANEOUS"),
+                Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Years\*"),
+                Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Printed")),
+            filePairer);
+        break;
+
+    default:
+        throw new ArgumentOutOfRangeException();
 }
 
 reporter?.SubReportAvailable += OnSubReportAvailable;
@@ -92,6 +121,8 @@ static void OnProgressUpdate(object? sender, string e)
     var color = Console.ForegroundColor;
     try
     {
+        Console.ForegroundColor = ConsoleColor.Gray;
+        Console.Write($"{DateTime.Now:G} ");
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine(e);
     }
@@ -103,7 +134,7 @@ static void OnProgressUpdate(object? sender, string e)
 
 static CommandType GetCommandType()
 {
-    return CommandType.FindSimilarFilesAcrossFolders;
+    return CommandType.DeleteSimilarFilesWithinSpecificFolders;
 }
 
 static void ExtractZipFiles(string zipFileSpec)
@@ -118,7 +149,8 @@ static void ExtractZipFiles(string zipFileSpec)
 
 static IFileGroupingReporter FindAndReportDuplicatesWithinFolders(
     IFileHasher fileHasher,
-    string[] rootFolderPaths)
+    string[] rootFolderPaths,
+    IReporter reporter)
 {
     return new DuplicatesFileGroupingReporter(
         new FileFinder(
@@ -128,13 +160,16 @@ static IFileGroupingReporter FindAndReportDuplicatesWithinFolders(
                 true),
             new ExtensionFileExcluder([".ini"])),
         new DirectoryNameFileGrouper(),
-        fileHasher);
+        fileHasher,
+        reporter);
 }
 
 static IFileGroupingReporter FindAndReportSimilarFilesInIndividualFolders(
     IFileHasher fileHasher,
     IImageComparer imageComparer,
-    string[] rootFolderPaths)
+    string[] rootFolderPaths,
+    IReporter reporter,
+    IFilePairer filePairer)
 {
     return new SimilarFilesFileGroupingReporter(
         new FileFinder(
@@ -145,13 +180,17 @@ static IFileGroupingReporter FindAndReportSimilarFilesInIndividualFolders(
             new ExtensionFileExcluder([".ini"])),
         new DirectoryNameFileGrouper(),
         fileHasher,
-        imageComparer);
+        imageComparer,
+        reporter,
+        filePairer);
 }
 
 static IFileGroupingReporter FindAndReportSimilarFilesAcrossFolders(
     IFileHasher fileHasher,
     IImageComparer imageComparer,
-    string[] rootFolderPaths)
+    string[] rootFolderPaths,
+    IReporter reporter,
+    IFilePairer filePairer)
 {
     return new SimilarFilesFileGroupingReporter(
         new FileFinder(
@@ -162,12 +201,15 @@ static IFileGroupingReporter FindAndReportSimilarFilesAcrossFolders(
             new ExtensionFileExcluder([".ini"])),
         NoopFileGrouper.Instance,
         fileHasher,
-        imageComparer);
+        imageComparer,
+        reporter,
+        filePairer);
 }
 
 static IFileGroupingReporter FindAndReportDuplicateAcrossFolders(
     IFileHasher fileHasher,
-    string[] rootFolderPaths)
+    string[] rootFolderPaths,
+    IReporter reporter)
 {
     return new DuplicatesFileGroupingReporter(
         new FileFinder(
@@ -177,5 +219,6 @@ static IFileGroupingReporter FindAndReportDuplicateAcrossFolders(
                 true),
             new ExtensionFileExcluder([".ini"])),
         NoopFileGrouper.Instance,
-        fileHasher);
+        fileHasher,
+        reporter);
 }

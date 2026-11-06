@@ -1,7 +1,7 @@
-﻿using System.Text;
-using DuplicateFinder.Files.FileFinders;
+﻿using DuplicateFinder.Files.FileFinders;
 using DuplicateFinder.Files.FileGroupers;
 using DuplicateFinder.Files.FileGroupings;
+using DuplicateFinder.Reporters;
 
 namespace DuplicateFinder.FileGroupingReporters;
 
@@ -9,13 +9,16 @@ internal abstract class FileGroupingReporter : IFileGroupingReporter
 {
     private readonly IFileFinder _fileFinder;
     private readonly IFileGrouper _fileGrouper;
+    private readonly IReporter _reporter;
 
     protected FileGroupingReporter(
         IFileFinder fileFinder,
-        IFileGrouper fileGrouper)
+        IFileGrouper fileGrouper,
+        IReporter reporter)
     {
         _fileFinder = fileFinder;
         _fileGrouper = fileGrouper;
+        _reporter = reporter;
 
         if (fileGrouper is ISlowFileGrouper slowFileGrouper)
         {
@@ -66,13 +69,7 @@ internal abstract class FileGroupingReporter : IFileGroupingReporter
 
     private string Report(IEnumerable<IFileInfoGrouping> fileGroups)
     {
-       var sb = new StringBuilder();
-        foreach (var fileGroup in GetReportableFileGroups(fileGroups))
-        {
-            sb.AppendLine($"{fileGroup}");
-        }
-
-        return sb.ToString();
+        return _reporter.Report(GetReportableFileGroups(fileGroups));
     }
 
     protected virtual IEnumerable<IFileInfoGrouping> GetReportableFileGroups(IEnumerable<IFileInfoGrouping> fileGroups)
