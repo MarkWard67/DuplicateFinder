@@ -3,6 +3,8 @@ using DuplicateFinder.Files;
 using DuplicateFinder.Files.FileFinders;
 using DuplicateFinder.Files.FileGroupers;
 using DuplicateFinder.Files.FileGroupings;
+using DuplicateFinder.Files.FileHashers;
+using DuplicateFinder.ImageComparers;
 using DuplicateFinder.Reporters;
 
 namespace DuplicateFinder.FileGroupingReporters;

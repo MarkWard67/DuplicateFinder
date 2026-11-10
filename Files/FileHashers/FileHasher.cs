@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 
-namespace DuplicateFinder.Files;
+namespace DuplicateFinder.Files.FileHashers;
 
 internal abstract class FileHasher(HashAlgorithm hashAlgorithm) : IFileHasher
 {
@@ -21,7 +21,10 @@ internal abstract class FileHasher(HashAlgorithm hashAlgorithm) : IFileHasher
 
             // Loop through each byte of the hashed data
             // and format each one as a hexadecimal string.
-            foreach (var t in data) sBuilder.Append(t.ToString("x2"));
+            foreach (var t in data)
+            {
+                sBuilder.Append(t.ToString("x2"));
+            }
 
             // Return the hexadecimal string.
             return sBuilder.ToString();
@@ -31,7 +34,4 @@ internal abstract class FileHasher(HashAlgorithm hashAlgorithm) : IFileHasher
             File.SetLastAccessTimeUtc(fileFullName, lastAccessTime);
         }
     }
-
-    public abstract void Clear();
-    public abstract void ClearIf(int maximumItems);
 }

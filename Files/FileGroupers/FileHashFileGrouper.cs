@@ -1,4 +1,5 @@
 ﻿using DuplicateFinder.Files.FileGroupings;
+using DuplicateFinder.Files.FileHashers;
 
 namespace DuplicateFinder.Files.FileGroupers;
 

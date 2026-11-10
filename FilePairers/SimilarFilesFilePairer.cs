@@ -4,13 +4,41 @@ namespace DuplicateFinder.FilePairers;
 
 internal partial class SimilarFilesFilePairer : IFilePairer
 {
-    private SimilarFilesFilePairer()
+    private readonly string? _redundantFilesFolderPath;
+
+    public SimilarFilesFilePairer()
     {
     }
 
-    public static SimilarFilesFilePairer Instance { get; } = new();
+    public SimilarFilesFilePairer(string redundantFilesFolderPath)
+    {
+        _redundantFilesFolderPath = redundantFilesFolderPath;
+    }    
 
     public IEnumerable<FileInfoPairing> PairFiles(IEnumerable<FileInfo> fileInfos)
+    {
+        if (_redundantFilesFolderPath == null)
+        {
+            return PairAllFiles(fileInfos);
+        }
+
+        var fileInfosByRedundancy = fileInfos
+            .GroupBy(x => x.DirectoryName == _redundantFilesFolderPath)
+            .ToDictionary(
+                x => x.Key,
+                x => x.ToArray());
+
+        if (!fileInfosByRedundancy.TryGetValue(true, out var redundantFiles))
+        {
+            return [];
+        }
+
+        return fileInfosByRedundancy.TryGetValue(false, out var nonRedundantFiles)
+            ? PairFiles(redundantFiles, nonRedundantFiles)
+            : PairAllFiles(redundantFiles);
+    }
+
+    private static List<FileInfoPairing> PairAllFiles(IEnumerable<FileInfo> fileInfos)
     {
         var fileInfoArray = fileInfos.ToArray();
 
@@ -44,6 +72,48 @@ internal partial class SimilarFilesFilePairer : IFilePairer
                     shouldPairWith
                         .OrderByDescending(x => x.Item2)
                         .Select(x => x.Item1)));
+            }
+        }
+
+        return pairings;
+    }
+
+    private static List<FileInfoPairing> PairFiles(
+        IEnumerable<FileInfo> redundantFileInfos,
+        IEnumerable<FileInfo> nonRedundantFileInfos)
+    {
+        var nonRedundantFileInfoArray = nonRedundantFileInfos.ToArray();
+
+        var pairings = new List<FileInfoPairing>();
+        foreach (var fileInfoI in redundantFileInfos)
+        {
+            var fileBaseNameI = GetBaseFileName(fileInfoI);
+
+            List<(FileInfo, bool)> shouldPairWith = [];
+
+            foreach (var fileInfoJ in nonRedundantFileInfoArray)
+            {
+                var fileBaseNameJ = GetBaseFileName(fileInfoJ);
+                if (fileBaseNameI.Equals(fileBaseNameJ, StringComparison.OrdinalIgnoreCase))
+                {
+                    shouldPairWith.Add((fileInfoJ, true));
+                }
+                else if (fileBaseNameI.Length > 3 &&
+                         fileBaseNameJ.Length > 3 &&
+                         NamesAreSimilarButNotIdentical(fileBaseNameI, fileBaseNameJ))
+                {
+                    shouldPairWith.Add((fileInfoJ, false));
+                }
+            }
+
+            if (shouldPairWith.Count > 0)
+            {
+                pairings.Add(
+                    new FileInfoPairing(
+                        fileInfoI,
+                        shouldPairWith
+                            .OrderByDescending(x => x.Item2)
+                            .Select(x => x.Item1)));
             }
         }
 

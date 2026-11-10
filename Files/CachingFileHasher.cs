@@ -1,42 +1,24 @@
-﻿using System.Collections.Concurrent;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
+using DuplicateFinder.Caches;
+using DuplicateFinder.Files.FileHashers;
 
 namespace DuplicateFinder.Files;
 
-internal abstract class CachingFileHasher : FileHasher, ICachingFileHasher
+internal abstract class CachingFileHasher(HashAlgorithm hashAlgorithm) : FileHasher(hashAlgorithm)
 {
-    private readonly ConcurrentDictionary<string, string> _cache = new(13001, [], StringComparer.OrdinalIgnoreCase);
-
-    protected CachingFileHasher(HashAlgorithm hashAlgorithm)
-        : base(hashAlgorithm)
-    {
-    }
+    private readonly FileHashCache _cache = new();
 
     public override string ComputeFileHash(string fileFullName)
     {
-        return _cache.GetOrAdd(fileFullName, base.ComputeFileHash);
+        return _cache.GetOrCreateAsync(
+            fileFullName,
+            x => Task.Run(() => base.ComputeFileHash(x)),
+            CancellationToken.None).GetAwaiter().GetResult();
     }
 
-    public void ClearCache()
+    private class FileHashCache()
+        : Cache<string, string>(Semaphore)
     {
-        _cache.Clear();
-    }
-
-    public bool ConfirmCache(string[] expectedKeys)
-    {
-        return expectedKeys.All(x => _cache.ContainsKey(x));
-    }
-
-    public override void Clear()
-    {
-        ClearCache();
-    }
-
-    public override void ClearIf(int maximumItems)
-    {
-        if (_cache.Count > maximumItems)
-        {
-            Clear();
-        }
+        private static readonly SemaphoreSlim Semaphore = new(1, 1);
     }
 }

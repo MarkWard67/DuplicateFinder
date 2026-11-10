@@ -5,8 +5,10 @@ using DuplicateFinder.Files;
 using DuplicateFinder.Files.FileExcluders;
 using DuplicateFinder.Files.FileFinders;
 using DuplicateFinder.Files.FileGroupers;
+using DuplicateFinder.Files.FileHashers;
 using DuplicateFinder.Folders;
 using DuplicateFinder.Folders.FolderFinders;
+using DuplicateFinder.ImageComparers;
 using DuplicateFinder.Reporters;
 using TextCopy;
 
@@ -14,17 +16,15 @@ const string rootFolder = @"G:\";
 
 var commandType = GetCommandType();
 
-var cachingSha256FileHasher = new CachingSHA256FileHasher();
-var filePairer = SimilarFilesFilePairer.Instance;
+var cachingSha256FileHasher = new CachingSha256FileHasher();
+var filePairer = new SimilarFilesFilePairer(Path.Combine(rootFolder, @"Other computers\Office PC\Photos\From Google Photos 20261001"));
 IFileGroupingReporter? reporter = null;
 
-using var imageComparer = new ImageMagickImageComparer(1e-2);
+using var imageComparer = new ImageMagickFallbackImageComparer(1e-2, ImageMagickImageMemoryCache2.Instance);
 
-// PerceptualHash comparison gives a very low value but is VERY slow
-// Use this is certain very specific situations e.g. different sizes but 'same' aspect ratio? Or exactly the same file name?
-    var xxx = imageComparer.Compare(
-    @"G:\Other computers\Office PC\Photos\From Google Photos 20261001\2016-02-21 12-19.jpg",
-    @"G:\Other computers\Office PC\Photos\Places\UK\Salisbury\2016-02-21 12-19.jpg");
+//////////var xxx = imageComparer.Compare(
+//////////@"G:\Other computers\Office PC\Photos\From Google Photos 20261001\2016-02-21 12-19.jpg",
+//////////@"G:\Other computers\Office PC\Photos\Places\UK\Salisbury\2016-02-21 12-19.jpg");
 
 switch (commandType)
 {

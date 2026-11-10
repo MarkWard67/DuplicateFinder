@@ -2,10 +2,4 @@
 
 namespace DuplicateFinder.Files;
 
-internal class CachingSHA256FileHasher : CachingFileHasher
-{
-    public CachingSHA256FileHasher()
-        : base(SHA256.Create())
-    {
-    }
-}
+internal class CachingSha256FileHasher() : CachingFileHasher(SHA256.Create());
