@@ -1,8 +1,8 @@
-﻿using DuplicateFinder.FilePairers;
-using DuplicateFinder.Files.FileFinders;
+﻿using DuplicateFinder.Files.FileFinders;
 using DuplicateFinder.Files.FileGroupers;
 using DuplicateFinder.Files.FileGroupings;
 using DuplicateFinder.Files.FileHashers;
+using DuplicateFinder.Files.FilePairers;
 using DuplicateFinder.ImageComparers;
 using DuplicateFinder.Reporters;
 

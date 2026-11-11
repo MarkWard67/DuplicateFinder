@@ -1,4 +1,4 @@
-﻿namespace DuplicateFinder.FilePairers;
+﻿namespace DuplicateFinder.Files.FilePairers;
 
 internal record FileInfoPairing
 {

@@ -1,16 +1,17 @@
 ﻿using DuplicateFinder;
 using DuplicateFinder.FileGroupingReporters;
-using DuplicateFinder.FilePairers;
 using DuplicateFinder.Files;
 using DuplicateFinder.Files.FileExcluders;
 using DuplicateFinder.Files.FileFinders;
 using DuplicateFinder.Files.FileGroupers;
 using DuplicateFinder.Files.FileHashers;
+using DuplicateFinder.Files.FilePairers;
 using DuplicateFinder.Folders;
 using DuplicateFinder.Folders.FolderFinders;
 using DuplicateFinder.ImageComparers;
 using DuplicateFinder.Reporters;
 using TextCopy;
+using SimilarFilesFilePairer = DuplicateFinder.Files.FilePairers.SimilarFilesFilePairer;
 
 const string rootFolder = @"G:\";
 

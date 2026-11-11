@@ -1,7 +1,8 @@
 ﻿using System.Collections.Concurrent;
-using DuplicateFinder.FilePairers;
+
 using DuplicateFinder.Files.FileGroupings;
 using DuplicateFinder.Files.FileHashers;
+using DuplicateFinder.Files.FilePairers;
 using DuplicateFinder.ImageComparers;
 
 namespace DuplicateFinder.Files.FileGroupers;

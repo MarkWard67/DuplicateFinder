@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace DuplicateFinder.FilePairers;
+namespace DuplicateFinder.Files.FilePairers;
 
 internal partial class SimilarFilesFilePairer : IFilePairer
 {
@@ -58,8 +58,9 @@ internal partial class SimilarFilesFilePairer : IFilePairer
                 {
                     shouldPairWith.Add((fileInfoJ, true));
                 }
-                else if (fileBaseNameI.Length > 3 && fileBaseNameJ.Length > 3 &&
-                         NamesAreSimilarButNotIdentical(fileBaseNameI, fileBaseNameJ))
+                else if (fileBaseNameI.Length > 3 &&
+                         fileBaseNameJ.Length > 3 &&
+                         NamesAreSimilar(fileBaseNameI, fileBaseNameJ))
                 {
                     shouldPairWith.Add((fileInfoJ, false));
                 }
@@ -67,11 +68,12 @@ internal partial class SimilarFilesFilePairer : IFilePairer
 
             if (shouldPairWith.Count > 0)
             {
-                pairings.Add(new FileInfoPairing(
-                    fileInfoI,
-                    shouldPairWith
-                        .OrderByDescending(x => x.Item2)
-                        .Select(x => x.Item1)));
+                pairings.Add(
+                    new FileInfoPairing(
+                        fileInfoI,
+                        shouldPairWith
+                            .OrderByDescending(x => x.Item2)
+                            .Select(x => x.Item1)));
             }
         }
 
@@ -100,7 +102,7 @@ internal partial class SimilarFilesFilePairer : IFilePairer
                 }
                 else if (fileBaseNameI.Length > 3 &&
                          fileBaseNameJ.Length > 3 &&
-                         NamesAreSimilarButNotIdentical(fileBaseNameI, fileBaseNameJ))
+                         NamesAreSimilar(fileBaseNameI, fileBaseNameJ))
                 {
                     shouldPairWith.Add((fileInfoJ, false));
                 }
@@ -130,25 +132,20 @@ internal partial class SimilarFilesFilePairer : IFilePairer
         return fileName;
     }
 
-    private static bool NamesAreSimilarButNotIdentical(string fileBaseName1, string fileBaseName2)
+    private static bool NamesAreSimilar(string fileBaseName1, string fileBaseName2)
     {
-        return HaveSimilarNames(); // || (HaveSameExtension() && HaveSimilarLength());
-
-        bool HaveSimilarNames()
+        if (fileBaseName1.Equals(fileBaseName2, StringComparison.OrdinalIgnoreCase))
         {
-            if (fileBaseName1.Equals(fileBaseName2, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            if (fileBaseName1.Contains(fileBaseName2, StringComparison.OrdinalIgnoreCase) ||
-                fileBaseName2.Contains(fileBaseName1, StringComparison.OrdinalIgnoreCase))
-            {
-                return IsMatch(fileBaseName1, fileBaseName2);
-            }
-
-            return false;
+            return true;
         }
+
+        if (fileBaseName1.Contains(fileBaseName2, StringComparison.OrdinalIgnoreCase) ||
+            fileBaseName2.Contains(fileBaseName1, StringComparison.OrdinalIgnoreCase))
+        {
+            return IsMatch(fileBaseName1, fileBaseName2);
+        }
+
+        return false;
 
         static bool IsMatch(string name1, string name2)
         {
