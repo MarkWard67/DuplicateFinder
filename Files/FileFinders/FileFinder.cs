@@ -21,9 +21,4 @@ internal class FileFinder(
             .OrderBy(x => x.FullName)
             .ToArray();
     }
-
-    public void Dispose()
-    {
-        // TODO release managed resources here
-    }
 }

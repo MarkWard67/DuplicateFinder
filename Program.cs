@@ -16,89 +16,98 @@ const string rootFolder = @"G:\";
 
 var commandType = GetCommandType();
 
-var cachingSha256FileHasher = new CachingSha256FileHasher();
 var filePairer = new SimilarFilesFilePairer(Path.Combine(rootFolder, @"Other computers\Office PC\Photos\From Google Photos 20261001"));
-IFileGroupingReporter? reporter = null;
 
-using var imageComparer = new ImageMagickFallbackImageComparer(1e-2, ImageMagickImageMemoryCache2.Instance);
+using var cachingSha256FileHasher = new CachingSha256FileHasher();
+using var imageComparer = new ImageMagickFallbackImageComparer(1e-2, ImageMagickImageMemoryCache.Instance);
 
 //////////var xxx = imageComparer.Compare(
 //////////@"G:\Other computers\Office PC\Photos\From Google Photos 20261001\2016-02-21 12-19.jpg",
 //////////@"G:\Other computers\Office PC\Photos\Places\UK\Salisbury\2016-02-21 12-19.jpg");
 
-switch (commandType)
+IFileGroupingReporter? reporter = null;
+
+try
 {
-    case CommandType.ExtractZipFiles:
-        ExtractZipFiles("takeout-20261008*.zip");
-        break;
+    switch (commandType)
+    {
+        case CommandType.ExtractZipFiles:
+            ExtractZipFiles("takeout-20261008*.zip");
+            break;
 
-    case CommandType.FindDuplicatesWithinFolders:
-        // Handle finding duplicates in individual folders
-        reporter = FindAndReportDuplicatesWithinFolders(
-            cachingSha256FileHasher,
-            [Path.Combine(rootFolder, @"Other computers\Office PC")],
-            DefaultReporter.Instance);
-        break;
+        case CommandType.FindDuplicatesWithinFolders:
+            // Handle finding duplicates in individual folders
+            reporter = FindAndReportDuplicatesWithinFolders(
+                cachingSha256FileHasher,
+                [Path.Combine(rootFolder, @"Other computers\Office PC")],
+                DefaultReporter.Instance);
+            break;
 
-    case CommandType.FindSimilarFilesWithinFolders:
-        // Handle finding similar files in individual folders
-        reporter = FindAndReportSimilarFilesInIndividualFolders(
-            cachingSha256FileHasher,
-            imageComparer,
-            [Path.Combine(rootFolder, @"Other computers\Office PC")],
-            DefaultReporter.Instance,
-            filePairer);
-        break;
+        case CommandType.FindSimilarFilesWithinFolders:
+            // Handle finding similar files in individual folders
+            reporter = FindAndReportSimilarFilesInIndividualFolders(
+                cachingSha256FileHasher,
+                imageComparer,
+                [Path.Combine(rootFolder, @"Other computers\Office PC")],
+                DefaultReporter.Instance,
+                filePairer);
+            break;
 
-    case CommandType.FindDuplicatesAcrossFolders:
-        // Handle finding duplicates across folder structures
-        reporter = FindAndReportDuplicateAcrossFolders(
-            cachingSha256FileHasher,
-            [Path.Combine(rootFolder, @"Other computers\Office PC")],
-            DefaultReporter.Instance);
-        break;
+        case CommandType.FindDuplicatesAcrossFolders:
+            // Handle finding duplicates across folder structures
+            reporter = FindAndReportDuplicateAcrossFolders(
+                cachingSha256FileHasher,
+                [Path.Combine(rootFolder, @"Other computers\Office PC")],
+                DefaultReporter.Instance);
+            break;
 
-    case CommandType.FindSimilarFilesAcrossFolders:
-        // Handle finding similar files across folder structures
-        reporter = FindAndReportSimilarFilesAcrossFolders(
-            cachingSha256FileHasher,
-            imageComparer,
-            [Path.Combine(rootFolder, @"Other computers\Office PC")],
-            DefaultReporter.Instance,
-            filePairer);
-        break;
+        case CommandType.FindSimilarFilesAcrossFolders:
+            // Handle finding similar files across folder structures
+            reporter = FindAndReportSimilarFilesAcrossFolders(
+                cachingSha256FileHasher,
+                imageComparer,
+                [Path.Combine(rootFolder, @"Other computers\Office PC")],
+                DefaultReporter.Instance,
+                filePairer);
+            break;
 
-    case CommandType.DeleteSimilarFilesWithinSpecificFolders:
-        // Delete duplicate files and similar files within specific folders
-        // If the files to which they are similar are in a different folder.
-        reporter = FindAndReportSimilarFilesAcrossFolders(
-            cachingSha256FileHasher,
-            imageComparer,
-            [Path.Combine(rootFolder, @"Other computers\Office PC")],
-            new EraseFilesReporter(
-                Path.Combine(rootFolder, @"Other computers\Office PC\Photos\From Google Photos 20261001"),
-                Path.Combine(rootFolder, @"Other computers\Office PC\Photos\__MISCELLANEOUS"),
-                Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Years\*"),
-                Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Printed")),
-            filePairer);
-        break;
+        case CommandType.DeleteSimilarFilesWithinSpecificFolders:
+            // Delete duplicate files and similar files within specific folders
+            // If the files to which they are similar are in a different folder.
+            reporter = FindAndReportSimilarFilesAcrossFolders(
+                cachingSha256FileHasher,
+                imageComparer,
+                [Path.Combine(rootFolder, @"Other computers\Office PC")],
+                new EraseFilesReporter(
+                    Path.Combine(rootFolder, @"Other computers\Office PC\Photos\From Google Photos 20261001"),
+                    Path.Combine(rootFolder, @"Other computers\Office PC\Photos\__MISCELLANEOUS"),
+                    Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Years\*"),
+                    Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Printed")),
+                filePairer);
+            break;
 
-    default:
-        throw new ArgumentOutOfRangeException();
+        default:
+            throw new ArgumentOutOfRangeException();
+    }
+
+    reporter?.SubReportAvailable += OnSubReportAvailable;
+    reporter?.ProgressUpdate += OnProgressUpdate;
+
+    var report = reporter?.Report();
+
+    if (report == null)
+    {
+        Console.WriteLine("ERROR! NO REPORT");
+        return 1;
+    }
+
+    ClipboardService.SetText(report);
+    Console.WriteLine(report);
 }
-
-reporter?.SubReportAvailable += OnSubReportAvailable;
-reporter?.ProgressUpdate += OnProgressUpdate;
-
-var report = reporter?.Report();
-if (report == null)
+finally
 {
-    Console.WriteLine("ERROR! NO REPORT");
-    return 1;
+    reporter?.Dispose();
 }
-
-ClipboardService.SetText(report);
-Console.WriteLine(report);
 
 return 0;
 

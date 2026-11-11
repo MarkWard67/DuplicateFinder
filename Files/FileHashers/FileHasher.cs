@@ -34,4 +34,9 @@ internal abstract class FileHasher(HashAlgorithm hashAlgorithm) : IFileHasher
             File.SetLastAccessTimeUtc(fileFullName, lastAccessTime);
         }
     }
+
+    public virtual void Dispose()
+    {
+        hashAlgorithm.Dispose();
+    }
 }

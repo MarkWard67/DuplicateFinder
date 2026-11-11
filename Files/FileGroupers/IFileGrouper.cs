@@ -2,7 +2,7 @@
 
 namespace DuplicateFinder.Files.FileGroupers;
 
-internal interface IFileGrouper
+internal interface IFileGrouper : IDisposable
 {
     public IEnumerable<IFileInfoGrouping> GroupFiles(
         IEnumerable<FileInfo> fileInfos,

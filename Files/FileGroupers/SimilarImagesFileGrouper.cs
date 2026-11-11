@@ -57,7 +57,7 @@ internal class SimilarImagesFileGrouper(
 
             var pairings = filePairer
                 .PairFiles(fileInfoArray)
-                .OrderBy(x => x.PairedFileInfos.Length) // Was OrderByDescending
+                .OrderByDescending(x => x.PairedFileInfos.Length)
                 .ToArray();
 
             RaiseFileGroupingHits(duplicates);
@@ -88,8 +88,9 @@ internal class SimilarImagesFileGrouper(
                 var cancellationToken = cancellationTokenSource.Token;
 
                 var similarFileTasks =
-                    potentialFileInfo2.AsParallel()
-                        .WithDegreeOfParallelism(5)
+                    potentialFileInfo2
+                        .AsParallel()
+                        .WithDegreeOfParallelism(Environment.ProcessorCount)
                         .Select(async f =>
                         {
                             if (cancellationToken.IsCancellationRequested || filesToIgnore.ContainsKey(f.FullName))
@@ -160,5 +161,12 @@ internal class SimilarImagesFileGrouper(
         {
             RaiseFileGroupingHit(fileInfoGrouping);
         }
+    }
+
+    public void Dispose()
+    {
+        _duplicateFileGrouper.Dispose();
+        fileHasher.Dispose();
+        imageComparer.Dispose();
     }
 }

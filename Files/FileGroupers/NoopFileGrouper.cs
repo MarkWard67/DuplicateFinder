@@ -27,4 +27,9 @@ internal class NoopFileGrouper : IFileGrouper
     {
         return [groupingFactory.CreateFileInfoGrouping(fileInfos, key)];
     }
+
+    public void Dispose()
+    {
+        // TODO release managed resources here
+    }
 }

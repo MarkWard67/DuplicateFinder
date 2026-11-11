@@ -10,11 +10,25 @@ internal abstract class ImageMagickImageComparer(
     Channels comparisonChannels
 ) : IImageComparer
 {
-    private static readonly Cache<(string, string, ErrorMetric), bool> CachedComparisons = new ComparisonCache();
+    private static bool _comparisonCacheIsDisposed;
+    protected static readonly Cache<(string, string, ErrorMetric), bool> CachedComparisons = new ComparisonCache();
 
     public void Dispose()
     {
         cache.Dispose();
+        try
+        {
+            if (!_comparisonCacheIsDisposed)
+            {
+                CachedComparisons.Dispose();
+            }
+
+            _comparisonCacheIsDisposed = true;
+        }
+        catch (ObjectDisposedException)
+        {
+            // Ignore, as this can happen if the cache is disposed before the comparer
+        }
     }
 
     public async Task<bool> CompareAsync(string image1FullName, string image2FullName, CancellationToken cancellationToken)
@@ -26,13 +40,15 @@ internal abstract class ImageMagickImageComparer(
 
         return await CachedComparisons.GetOrCreateAsync(
             (image1FullName, image2FullName, comparisonErrorMetric),
-            async k => await CompareAsyncImpl(k.Item1, k.Item2, cancellationToken),
+            async k => await CompareAsyncImpl(k.Item1, k.Item2, comparisonErrorMetric, cancellationToken),
             cancellationToken);
     }
 
-    protected virtual void DecorateImage(MagickImage image)
+    protected virtual MagickImage DecorateImage(MagickImage image)
     {
-        image.ColorFuzz = new Percentage(5);
+        var clone = (MagickImage)image.Clone();
+        clone.ColorFuzz = new Percentage(5);
+        return clone;
     }
 
     protected virtual List<int> GetRotationAngles(MagickImage image1, MagickImage image2)
@@ -46,15 +62,21 @@ internal abstract class ImageMagickImageComparer(
         }
         else if (image1.Width == image2.Height && image1.Height == image2.Width)
         {
-            // Image dimensions are swapped, so compare with 90 and a further 180 degree (so 270 aka -90) degree rotations
+            // Image dimensions are swapped, so compare with 90 and -90 (aka 270) degree rotations
             rotationAngles.Add(90);
-            rotationAngles.Add(180);
+            rotationAngles.Add(270);
         }
 
         return rotationAngles;
     }
 
-    private async Task<bool> CompareAsyncImpl(string image1FullName, string image2FullName, CancellationToken cancellationToken)
+
+    private static async Task<MagickImage> CreateImageAsync(string imageFullName)
+    {
+        return await Task.FromResult(new MagickImage(imageFullName));
+    }
+
+    private async Task<bool> CompareAsyncImpl(string image1FullName, string image2FullName, ErrorMetric errorMetric, CancellationToken cancellationToken)
     {
         if (image1FullName == image2FullName)
         {
@@ -65,29 +87,28 @@ internal abstract class ImageMagickImageComparer(
         {
             var image1 = await cache.GetOrCreateAsync(
                 image1FullName,
-                k => Task.FromResult(new MagickImage(k)),
+                CreateImageAsync,
                 cancellationToken);
-            DecorateImage(image1);
+            image1 = DecorateImage(image1);
 
-            var image2 = await cache.GetOrCreateAsync(
+            var originalImage2 = await cache.GetOrCreateAsync(
                 image2FullName,
-                k => Task.FromResult(new MagickImage(k)),
+                CreateImageAsync,
                 cancellationToken);
-            DecorateImage(image2);
+            originalImage2 = DecorateImage(originalImage2);
 
-            var rotationAngles = GetRotationAngles(image1, image2);
+            var rotationAngles = GetRotationAngles(image1, originalImage2);
             foreach (var rotationAngle in rotationAngles)
             {
+                var image2 = (MagickImage)originalImage2.Clone();
+                image2 = DecorateImage(image2);
+
                 if (rotationAngle > 0)
                 {
                     image2.Rotate(rotationAngle);
                 }
 
-                var distortion = image1.Compare(
-                    image2,
-                    comparisonErrorMetric,
-                    comparisonChannels);
-
+                var distortion = CalculateDistortion(image1, image2, errorMetric);
                 if (distortion < maxDistortion)
                 {
                     return true;
@@ -102,11 +123,18 @@ internal abstract class ImageMagickImageComparer(
         }
     }
 
-    private class ComparisonCache()
-        : Cache<(string, string, ErrorMetric), bool>(Semaphore)
+    protected virtual double CalculateDistortion(MagickImage image1, MagickImage image2, ErrorMetric errorMetric)
     {
-        private static readonly SemaphoreSlim Semaphore = new(1, 1);
+        var distortion = image1.Compare(
+            image2,
+            errorMetric,
+            comparisonChannels);
+        return distortion;
+    }
 
+    private class ComparisonCache()
+        : Cache<(string, string, ErrorMetric), bool>(new SemaphoreSlimCache<(string, string, ErrorMetric)>())
+    {
         public override Task<bool> GetOrCreateAsync(
             (string, string, ErrorMetric) key,
             Func<(string, string, ErrorMetric), Task<bool>> objectFactory,

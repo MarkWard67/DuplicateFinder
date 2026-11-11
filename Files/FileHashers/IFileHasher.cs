@@ -1,6 +1,7 @@
 ﻿namespace DuplicateFinder.Files.FileHashers;
 
-internal interface IFileHasher
+internal interface IFileHasher : IDisposable
 {
     public string ComputeFileHash(string fileFullName);
+
 }

@@ -76,4 +76,9 @@ internal abstract class FileGroupingReporter : IFileGroupingReporter
     {
         return fileGroups.Where(x => x.Count > 1);
     }
+
+    public void Dispose()
+    {
+        _fileGrouper.Dispose();
+    }
 }

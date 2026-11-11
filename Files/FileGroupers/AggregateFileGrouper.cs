@@ -76,4 +76,9 @@ internal class AggregateFileGrouper : ISlowFileGrouper
     {
         ProgressUpdate?.Invoke(sender ?? this, progressUpdate);
     }
+
+    public void Dispose()
+    {
+        // TODO release managed resources here
+    }
 }

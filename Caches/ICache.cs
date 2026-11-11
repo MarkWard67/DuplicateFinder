@@ -6,5 +6,4 @@ internal interface ICache<TKey, TValue> : IDisposable
         TKey key,
         Func<TKey, Task<TValue>> objectFactoryAsync,
         CancellationToken cancellationToken);
-
 }

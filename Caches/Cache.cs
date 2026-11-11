@@ -1,13 +1,21 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Primitives;
 
 namespace DuplicateFinder.Caches;
 
-internal abstract class Cache<TKey, TValue>(SemaphoreSlim semaphore) : ICache<TKey, TValue>
+internal abstract class Cache<TKey, TValue>(ISemaphoreCache<TKey> semaphoreCache) : ICache<TKey, TValue>
 {
     private readonly MemoryCache _cache = new(new MemoryCacheOptions());
 
+    //////////protected Cache(SemaphoreSlim semaphore)
+    //////////{
+    //////////    _semaphoreCache  = new DegenerateSemaphoreCache(semaphore);
+    //////////}
+
     public void Dispose()
     {
+        semaphoreCache.Dispose();
         _cache.Dispose();
     }
 
@@ -25,7 +33,8 @@ internal abstract class Cache<TKey, TValue>(SemaphoreSlim semaphore) : ICache<TK
         }
 
         // Get or create a lock specific only to this key
-        await WaitLock(cancellationToken);
+        var semaphore = await GetSemaphore(key, cancellationToken);
+        await semaphore.WaitAsync(cancellationToken);
 
         try
         {
@@ -37,13 +46,14 @@ internal abstract class Cache<TKey, TValue>(SemaphoreSlim semaphore) : ICache<TK
             }
 
             cachedObject = await objectFactoryAsync(key);
+
             _cache.Set(
                 key,
                 cachedObject,
-                CacheEntryOptionsFactory()
+                CacheEntryOptionsFactory(cancellationToken)
             );
 
-            return cachedObject!;
+            return cachedObject;
         }
         finally
         {
@@ -51,13 +61,21 @@ internal abstract class Cache<TKey, TValue>(SemaphoreSlim semaphore) : ICache<TK
         }
     }
 
-    protected virtual MemoryCacheEntryOptions CacheEntryOptionsFactory()
+    private async Task<SemaphoreSlim> GetSemaphore(
+        [DisallowNull] TKey key,
+        CancellationToken cancellationToken)
     {
-        return new MemoryCacheEntryOptions();
+        var semaphore = await semaphoreCache.GetOrCreateAsync(
+            key,
+            _ => semaphoreCache.CreateSemaphore(),
+        cancellationToken);
+        return semaphore;
     }
 
-    protected virtual async Task WaitLock(CancellationToken cancellationToken)
+    protected virtual MemoryCacheEntryOptions CacheEntryOptionsFactory(CancellationToken cancellationToken)
     {
-        await semaphore.WaitAsync(TimeSpan.FromMinutes(1), cancellationToken);
+        return new MemoryCacheEntryOptions()
+            .AddExpirationToken(
+                new CancellationChangeToken(cancellationToken));
     }
 }

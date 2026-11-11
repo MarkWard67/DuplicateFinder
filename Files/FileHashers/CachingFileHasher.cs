@@ -1,8 +1,8 @@
 ﻿using System.Security.Cryptography;
-using DuplicateFinder.Caches;
-using DuplicateFinder.Files.FileHashers;
 
-namespace DuplicateFinder.Files;
+using DuplicateFinder.Caches;
+
+namespace DuplicateFinder.Files.FileHashers;
 
 internal abstract class CachingFileHasher(HashAlgorithm hashAlgorithm) : FileHasher(hashAlgorithm)
 {
@@ -13,12 +13,19 @@ internal abstract class CachingFileHasher(HashAlgorithm hashAlgorithm) : FileHas
         return _cache.GetOrCreateAsync(
             fileFullName,
             x => Task.Run(() => base.ComputeFileHash(x)),
-            CancellationToken.None).GetAwaiter().GetResult();
+            CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
     }
 
     private class FileHashCache()
-        : Cache<string, string>(Semaphore)
+        : Cache<string, string>(new SemaphoreSlimCache<string>())
     {
-        private static readonly SemaphoreSlim Semaphore = new(1, 1);
+    }
+
+    public override void Dispose()
+    {
+        _cache.Dispose();
+        base.Dispose();
     }
 }

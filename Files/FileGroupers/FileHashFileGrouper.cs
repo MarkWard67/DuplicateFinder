@@ -15,7 +15,9 @@ internal class FileHashFileGrouper(IFileHasher fileHasher) : IFileGrouper
             key);
     }
 
-    public IEnumerable<IFileInfoGrouping> GroupFiles(IEnumerable<FileInfo> fileInfos, IFileInfoGroupingFactory groupingFactory,
+    public IEnumerable<IFileInfoGrouping> GroupFiles(
+        IEnumerable<FileInfo> fileInfos,
+        IFileInfoGroupingFactory groupingFactory,
         FileInfoGroupingKey? key = null)
     {
         var fileInfoArray = fileInfos.ToArray();
@@ -32,5 +34,10 @@ internal class FileHashFileGrouper(IFileHasher fileHasher) : IFileGrouper
                 FileInfoGroupingKey.Extend(key, g.Key)))
             .ToArray();
         return result;
+    }
+
+    public void Dispose()
+    {
+        fileHasher.Dispose();
     }
 }

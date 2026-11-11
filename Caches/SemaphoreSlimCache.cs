@@ -2,16 +2,22 @@
 
 namespace DuplicateFinder.Caches;
 
-internal class SemaphoreSlimCache
+internal abstract class SemaphoreSlimCache
 {
-    private static readonly SemaphoreSlim Semaphore = new(1, 1);
+    protected static readonly SemaphoreSlim Semaphore = new(1, 1);
+}
+
+internal class SemaphoreSlimCache<TKey> : SemaphoreSlimCache, ISemaphoreCache<TKey>
+{
     private readonly MemoryCache _cache = new(new MemoryCacheOptions());
 
     public virtual async Task<SemaphoreSlim> GetOrCreateAsync(
-        SemaphoreSlimCacheKey key,
-        Func<SemaphoreSlimCacheKey, Task<SemaphoreSlim>> semaphoreFactoryAsync,
+        TKey key,
+        Func<TKey, Task<SemaphoreSlim>> semaphoreFactoryAsync,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(key);
+
         // Fast Path: If it's a cache hit, return immediately without locking
         if (_cache.TryGetValue(key, out SemaphoreSlim? cachedObject) && cachedObject != null)
         {
@@ -37,11 +43,21 @@ internal class SemaphoreSlimCache
                 new MemoryCacheEntryOptions()
             );
 
-            return cachedObject!;
+            return cachedObject;
         }
         finally
         {
             Semaphore.Release();
         }
+    }
+
+    public virtual Task<SemaphoreSlim> CreateSemaphore()
+    {
+        return Task.FromResult(new SemaphoreSlim(1, 1));
+    }
+
+    public void Dispose()
+    {
+        _cache.Dispose();
     }
 }

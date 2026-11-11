@@ -33,4 +33,9 @@ internal class FileLengthFileGrouper : IFileGrouper
             .ToArray();
         return result;
     }
+
+    public void Dispose()
+    {
+        // TODO release managed resources here
+    }
 }

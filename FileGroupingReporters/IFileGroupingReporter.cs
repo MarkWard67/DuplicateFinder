@@ -1,6 +1,6 @@
 ﻿namespace DuplicateFinder.FileGroupingReporters;
 
-internal interface IFileGroupingReporter
+internal interface IFileGroupingReporter : IDisposable
 {
     string Report();
 
