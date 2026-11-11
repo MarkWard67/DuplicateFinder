@@ -2,7 +2,7 @@
 
 internal class IdenticalFileInfoGroupingFactory : IFileInfoGroupingFactory
 {
-    public static IdenticalFileInfoGroupingFactory Instance { get; } = new IdenticalFileInfoGroupingFactory();
+    public static IdenticalFileInfoGroupingFactory Instance { get; } = new();
 
     private IdenticalFileInfoGroupingFactory()
     {

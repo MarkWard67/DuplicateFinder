@@ -20,11 +20,13 @@ internal abstract class FileGroupingReporter : IFileGroupingReporter
         _fileGrouper = fileGrouper;
         _reporter = reporter;
 
-        if (fileGrouper is ISlowFileGrouper slowFileGrouper)
+        if (fileGrouper is not ISlowFileGrouper slowFileGrouper)
         {
-            slowFileGrouper.FileGroupingHit += OnFileGroupingHit;
-            slowFileGrouper.ProgressUpdate += OnProgressUpdate;
+            return;
         }
+
+        slowFileGrouper.FileGroupingHit += OnFileGroupingHit;
+        slowFileGrouper.ProgressUpdate += OnProgressUpdate;
     }
 
     public string Report()

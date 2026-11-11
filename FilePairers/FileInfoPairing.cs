@@ -7,7 +7,7 @@ internal record FileInfoPairing
         IEnumerable<FileInfo> pairedFileInfos)
     {
         this.MasterFileInfo = MasterFileInfo;
-        this.PairedFileInfos = pairedFileInfos.ToArray();
+        PairedFileInfos = pairedFileInfos.ToArray();
     }
 
     public FileInfo MasterFileInfo { get; init; }
@@ -17,7 +17,7 @@ internal record FileInfoPairing
         out FileInfo masterFileInfo,
         out FileInfo[] pairedFileInfos)
     {
-        masterFileInfo = this.MasterFileInfo;
-        pairedFileInfos = this.PairedFileInfos;
+        masterFileInfo = MasterFileInfo;
+        pairedFileInfos = PairedFileInfos;
     }
 }

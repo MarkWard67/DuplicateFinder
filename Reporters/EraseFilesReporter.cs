@@ -6,7 +6,7 @@ namespace DuplicateFinder.Reporters;
 internal class EraseFilesReporter : DefaultReporter
 {
     private readonly HashSet<string> _eraseFromFolderPaths = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _eraseFromRootFolderPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _eraseFromRootFolderPaths = new(StringComparer.OrdinalIgnoreCase);
 
     public EraseFilesReporter(params IEnumerable<string> eraseFromFolderPaths)
     {

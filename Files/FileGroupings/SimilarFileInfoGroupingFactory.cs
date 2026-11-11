@@ -2,7 +2,7 @@
 
 internal class SimilarFileInfoGroupingFactory : IFileInfoGroupingFactory
 {
-    public static SimilarFileInfoGroupingFactory Instance { get; } = new SimilarFileInfoGroupingFactory();
+    public static SimilarFileInfoGroupingFactory Instance { get; } = new();
 
     private SimilarFileInfoGroupingFactory()
     {

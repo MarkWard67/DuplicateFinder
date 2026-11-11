@@ -19,9 +19,7 @@ internal abstract class CachingFileHasher(HashAlgorithm hashAlgorithm) : FileHas
     }
 
     private class FileHashCache()
-        : Cache<string, string>(new SemaphoreSlimCache<string>())
-    {
-    }
+        : Cache<string, string>(new SemaphoreSlimCache<string>());
 
     public override void Dispose()
     {
