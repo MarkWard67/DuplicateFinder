@@ -29,17 +29,25 @@ internal class ImageMagickSlowImageComparer(
 
         var perceptualHashTask1 = _cache.GetOrCreateAsync(
             image1.FileName!,
-            _ => Task.FromResult(image1.PerceptualHash()),
+            _ => Task.FromResult(image1.PerceptualHash(image1.ColorSpace)),
             CancellationToken.None);
 
         var perceptualHashTask2 = _cache.GetOrCreateAsync(
             image2.FileName!,
-            _ => Task.FromResult(image2.PerceptualHash()),
+            _ => Task.FromResult(image2.PerceptualHash(image2.ColorSpace)),
             CancellationToken.None);
 
         Task.WaitAll(perceptualHashTask1, perceptualHashTask2);
 
-        return perceptualHashTask1.Result.SumSquaredDistance(perceptualHashTask2.Result);
+        try
+        {
+            return perceptualHashTask1.Result.SumSquaredDistance(perceptualHashTask2.Result);
+        }
+        catch (Exception)
+        {
+            // Temporary: lose this once the invalid colorspace issue is diagnosed
+            return 1;
+        }
     }
 
     private class PerceptualHashCache()

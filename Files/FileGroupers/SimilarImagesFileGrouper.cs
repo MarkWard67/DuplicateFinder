@@ -47,6 +47,8 @@ internal class SimilarImagesFileGrouper(
             var duplicates = _duplicateFileGrouper.GroupFiles(fileInfoArray)
                 .Where(x => x.Count >= 2)
                 .ToArray();
+            
+            RaiseFileGroupingHits(duplicates);
 
             // Consider only one of each duplicate group as considering all is a waste of effort
             var filesToIgnore = new ConcurrentDictionary<string, byte>(
@@ -61,8 +63,6 @@ internal class SimilarImagesFileGrouper(
                 .OrderByDescending(x => x.PairedFileInfos.Length)
                 .ToArray();
 
-            RaiseFileGroupingHits(duplicates);
-
             if (pairings.Length == 0)
             {
                 return duplicates.ToArray();
@@ -75,9 +75,9 @@ internal class SimilarImagesFileGrouper(
                 var similarities = new List<(FileInfo, FileInfo)>();
 
                 pairingIndex++;
-                if (pairingIndex % 10 == 0)
+                if (pairingIndex < 10 || pairingIndex % 10 == 0)
                 {
-                    RaiseProgressUpdate($"Pairing {pairingIndex} of {pairings.Length}");
+                    RaiseProgressUpdate($"Pairing {pairingIndex} of {pairings.Length} ({fileInfo1.FullName} -> {potentialFileInfo2.Length})");
                 }
 
                 if (filesToIgnore.ContainsKey(fileInfo1.FullName))

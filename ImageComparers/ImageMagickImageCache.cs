@@ -5,15 +5,15 @@ using Microsoft.Extensions.Primitives;
 
 namespace DuplicateFinder.ImageComparers;
 
-internal class ImageMagickImageMemoryCache : Cache<string, MagickImage>
+internal class ImageMagickImageCache : Cache<string, MagickImage>
 {
-    private ImageMagickImageMemoryCache()
+    private ImageMagickImageCache()
         : base(
             new SemaphoreSlimCache<string>())
     {
     }
 
-    public static ImageMagickImageMemoryCache Instance { get; } = new();
+    public static ImageMagickImageCache Instance { get; } = new();
 
     protected override MemoryCacheEntryOptions CacheEntryOptionsFactory(CancellationToken cancellationToken)
     {
@@ -24,9 +24,12 @@ internal class ImageMagickImageMemoryCache : Cache<string, MagickImage>
     }
 
     // Define the callback function (must be static or a self-contained lambda to prevent memory leaks)
-    protected virtual void AfterEviction(object key, object? value, EvictionReason reason, object? state)
+    protected virtual void AfterEviction(
+        object key,
+        object? value,
+        EvictionReason reason,
+        object? state)
     {
-
         if (value is IDisposable disposableValue)
         {
             disposableValue.Dispose();

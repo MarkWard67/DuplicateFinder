@@ -14,13 +14,15 @@ using TextCopy;
 using SimilarFilesFilePairer = DuplicateFinder.Files.FilePairers.SimilarFilesFilePairer;
 
 const string rootFolder = @"G:\";
+const bool fileFindIsRecursive = false;
+const string fileFindFileSpec = "2016-02-21 13-06*.jpg";
 
 var commandType = GetCommandType();
 
 var filePairer = new SimilarFilesFilePairer(Path.Combine(rootFolder, @"Other computers\Office PC\Photos\From Google Photos 20261001"));
 
 using var cachingSha256FileHasher = new CachingSha256FileHasher();
-using var imageComparer = new ImageMagickFallbackImageComparer(1e-2, ImageMagickImageMemoryCache.Instance);
+using var imageComparer = new ImageMagickFallbackImageComparer(1e-2, ImageMagickImageCache.Instance);
 
 //////////var xxx = imageComparer.Compare(
 //////////@"G:\Other computers\Office PC\Photos\From Google Photos 20261001\2016-02-21 12-19.jpg",
@@ -168,6 +170,8 @@ static IFileGroupingReporter FindAndReportDuplicatesWithinFolders(
                 rootFolderPaths,
                 "*",
                 true),
+            fileFindIsRecursive,
+            fileFindFileSpec,
             new ExtensionFileExcluder([".ini"])),
         new DirectoryNameFileGrouper(),
         fileHasher,
@@ -187,6 +191,8 @@ static IFileGroupingReporter FindAndReportSimilarFilesInIndividualFolders(
                 rootFolderPaths,
                 "*",
                 true),
+            fileFindIsRecursive,
+            fileFindFileSpec,
             new ExtensionFileExcluder([".ini"])),
         new DirectoryNameFileGrouper(),
         fileHasher,
@@ -208,6 +214,8 @@ static IFileGroupingReporter FindAndReportSimilarFilesAcrossFolders(
                 rootFolderPaths,
                 "*",
                 true),
+            fileFindIsRecursive,
+            fileFindFileSpec,
             new ExtensionFileExcluder([".ini"])),
         NoopFileGrouper.Instance,
         fileHasher,
@@ -227,6 +235,8 @@ static IFileGroupingReporter FindAndReportDuplicateAcrossFolders(
                 rootFolderPaths,
                 "*",
                 true),
+            fileFindIsRecursive,
+            fileFindFileSpec,
             new ExtensionFileExcluder([".ini"])),
         NoopFileGrouper.Instance,
         fileHasher,

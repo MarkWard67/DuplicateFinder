@@ -33,21 +33,22 @@ internal abstract class ImageMagickImageComparer(
 
     public async Task<bool> CompareAsync(string image1FullName, string image2FullName, CancellationToken cancellationToken)
     {
-        if (image1FullName == image2FullName)
-        {
-            return true;
-        }
-
         return await CachedComparisons.GetOrCreateAsync(
             (image1FullName, image2FullName, comparisonErrorMetric),
-            async k => await CompareAsyncImpl(k.Item1, k.Item2, comparisonErrorMetric, cancellationToken),
+            k => CompareAsyncImpl(k.Item1, k.Item2, comparisonErrorMetric, cancellationToken),
             cancellationToken);
     }
 
     protected virtual MagickImage DecorateImage(MagickImage image)
     {
+        image.ColorFuzz = new Percentage(10);
+        return image;
+    }
+
+    private static MagickImage RotateImage(MagickImage image, int degrees)
+    {
         var clone = (MagickImage)image.Clone();
-        clone.ColorFuzz = new Percentage(5);
+        clone.Rotate(degrees);
         return clone;
     }
 
@@ -66,14 +67,32 @@ internal abstract class ImageMagickImageComparer(
             rotationAngles.Add(90);
             rotationAngles.Add(270);
         }
-
+        else
+        {
+            if (image1.Width > image1.Height)
+            {
+                if (image2.Width > image2.Height)
+                {
+                    // Both images are landscape, so compare as-is
+                    rotationAngles.Add(0);
+                }
+                else
+                {
+                    // Image1 is landscape and Image2 is portrait, so compare with 90 and -90 (aka 270) degree rotations
+                    rotationAngles.Add(90);
+                    rotationAngles.Add(270);
+                }
+            }
+        }
+        
         return rotationAngles;
     }
-
-
+    
     private static async Task<MagickImage> CreateImageAsync(string imageFullName)
     {
-        return await Task.FromResult(new MagickImage(imageFullName));
+        var magickImage = new MagickImage(imageFullName);
+        magickImage.ColorSpace = ColorSpace.Luv;
+        return await Task.FromResult(magickImage);
     }
 
     private async Task<bool> CompareAsyncImpl(string image1FullName, string image2FullName, ErrorMetric errorMetric, CancellationToken cancellationToken)
@@ -95,27 +114,14 @@ internal abstract class ImageMagickImageComparer(
                 image2FullName,
                 CreateImageAsync,
                 cancellationToken);
-            originalImage2 = DecorateImage(originalImage2);
 
-            var rotationAngles = GetRotationAngles(image1, originalImage2);
-            foreach (var rotationAngle in rotationAngles)
-            {
-                var image2 = (MagickImage)originalImage2.Clone();
-                image2 = DecorateImage(image2);
-
-                if (rotationAngle > 0)
-                {
-                    image2.Rotate(rotationAngle);
-                }
-
-                var distortion = CalculateDistortion(image1, image2, errorMetric);
-                if (distortion < maxDistortion)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            var rotationAngles = GetRotationAngles(image1, originalImage2).DefaultIfEmpty(0);
+            return rotationAngles
+                .Select(rotationAngle => rotationAngle == 0
+                    ? originalImage2
+                    : RotateImage(originalImage2, rotationAngle))
+                .Select(image2 => CalculateDistortion(image1, image2, errorMetric))
+                .Any(distortion => distortion < maxDistortion);
         }
         catch (MagickErrorException)
         {

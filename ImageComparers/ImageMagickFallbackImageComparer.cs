@@ -23,7 +23,9 @@ internal class ImageMagickFallbackImageComparer(
             return true;
         }
 
-        return Path.GetFileName(image1FullName).Equals(Path.GetFileName(image2FullName)) &&
+        var baseName1 = Path.GetFileNameWithoutExtension(image1FullName);
+        var baseName2 = Path.GetFileNameWithoutExtension(image2FullName);
+        return (baseName1.Contains(baseName2, StringComparison.OrdinalIgnoreCase) || baseName2.Contains(baseName1, StringComparison.OrdinalIgnoreCase)) &&
                await _slowComparer.CompareAsync(image1FullName, image2FullName, cancellationToken);
     }
 }
