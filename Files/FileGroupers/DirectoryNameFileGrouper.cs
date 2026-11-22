@@ -19,9 +19,7 @@ internal class DirectoryNameFileGrouper : IFileGrouper
     {
         var result = fileInfos
             .GroupBy(f => f.DirectoryName)
-            .Select(g => new FileInfoGrouping(
-                g,
-                FileInfoGroupingKey.Extend(key, g.Key)))
+            .Select(g => new FileInfoGrouping(FileInfoGroupingKey.Extend(key, g.Key), g))
             .ToArray();
         return result;
     }

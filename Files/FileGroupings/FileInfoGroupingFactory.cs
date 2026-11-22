@@ -12,6 +12,13 @@ internal class FileInfoGroupingFactory : IFileInfoGroupingFactory
         IEnumerable<FileInfo> fileInfos,
         FileInfoGroupingKey? key = null)
     {
-        return new FileInfoGrouping(fileInfos, key);
+        return new FileInfoGrouping(key, fileInfos);
+    }
+
+    public IFileInfoGrouping CreateFileInfoGrouping(
+        IEnumerable<IFileInfoTuple> fileInfoTuples,
+        FileInfoGroupingKey? key = null)
+    {
+        return new FileInfoGrouping(key, fileInfoTuples);
     }
 }

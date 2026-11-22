@@ -38,8 +38,13 @@ internal abstract class FilePairer : IFilePairer
 
         IEnumerable<FileInfoPairing> PairAllFiles(IEnumerable<FileInfo> fileInfosToPair)
         {
-            return PairFiles(fileInfosToPair, (f, i) => f.Skip(i));
+            return PairFiles(fileInfosToPair, SkipI);
         }
+    }
+
+    private static IEnumerable<FileInfo> SkipI(IEnumerable<FileInfo> f, int i)
+    {
+        return f.Skip(i + 1);
     }
 
     protected virtual IEnumerable<FileInfoPairing> PairFiles(

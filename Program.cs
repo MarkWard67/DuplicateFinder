@@ -13,16 +13,32 @@ using DuplicateFinder.Reporters;
 using TextCopy;
 using SimilarFilesFilePairer = DuplicateFinder.Files.FilePairers.SimilarFilesFilePairer;
 
+//////////var fileFinder = new FileFinder(
+//////////    new FolderFinder(@"G:\Other computers\Office PC\Photos", "*", true));
+//////////var files = fileFinder.FindFiles();
+//////////var grouper = FileNameFileGrouper.Instance;
+//////////var groupedFiles = grouper.GroupFiles(files).Where(x => x.Count() > 1).ToArray();
+//////////var rep = DefaultReporter.Instance;
+//////////var xxx = rep.Report(groupedFiles);
+
 const string rootFolder = @"G:\";
 const bool fileFindIsRecursive = false;
-const string fileFindFileSpec = "2016-02-21 13-06*.jpg";
+const string fileFindFileSpec = "*";
 
 var commandType = GetCommandType();
 
-var filePairer = new SimilarFilesFilePairer(Path.Combine(rootFolder, @"Other computers\Office PC\Photos\From Google Photos 20261001"));
+var filePairer = new SimilarFilesFilePairer(); //Path.Combine(rootFolder, @"Other computers\Office PC\Photos\From Google Photos 20261001"));
 
 using var cachingSha256FileHasher = new CachingSha256FileHasher();
-using var imageComparer = new ImageMagickFallbackImageComparer(1e-2, ImageMagickImageCache.Instance);
+using var imageComparer = new ImageMagickFallbackImageComparer(
+    new ImageMagickFastImageComparer(
+        5e-2,
+        2e-2,
+        ImageMagickImageCache.Instance),
+    new ImageMagickSlowImageComparer(
+        5e-2,
+        2e-2,
+        ImageMagickImageCache.Instance));
 
 //////////var xxx = imageComparer.Compare(
 //////////@"G:\Other computers\Office PC\Photos\From Google Photos 20261001\2016-02-21 12-19.jpg",

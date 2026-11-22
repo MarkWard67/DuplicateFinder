@@ -76,7 +76,7 @@ internal abstract class FileGroupingReporter : IFileGroupingReporter
 
     protected virtual IEnumerable<IFileInfoGrouping> GetReportableFileGroups(IEnumerable<IFileInfoGrouping> fileGroups)
     {
-        return fileGroups.Where(x => x.Count > 1);
+        return fileGroups.Where(x => x.Count > 0);
     }
 
     public void Dispose()

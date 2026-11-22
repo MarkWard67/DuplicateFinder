@@ -24,7 +24,7 @@ internal class FileHashFileGrouper(IFileHasher fileHasher) : IFileGrouper
 
         if (fileInfoArray.Length < 2)
         {
-            return [new FileInfoGrouping(fileInfoArray, key)];
+            return [new FileInfoGrouping(key, fileInfoArray)];
         }
 
         var result = fileInfoArray

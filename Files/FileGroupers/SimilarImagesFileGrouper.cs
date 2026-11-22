@@ -40,20 +40,19 @@ internal class SimilarImagesFileGrouper(
 
             if (fileInfoArray.Length < 2)
             {
-                return [new FileInfoGrouping(fileInfoArray, key)];
+                return [new FileInfoGrouping(key, fileInfoArray)];
             }
 
             RaiseProgressUpdate($"Seeking duplicates for grouping {key?.ToString() ?? "unnamed"}...");
             var duplicates = _duplicateFileGrouper.GroupFiles(fileInfoArray)
-                .Where(x => x.Count >= 2)
+                //////////.Where(x => x.Count > 1)
                 .ToArray();
             
             RaiseFileGroupingHits(duplicates);
 
-            // Consider only one of each duplicate group as considering all is a waste of effort
             var filesToIgnore = new ConcurrentDictionary<string, byte>(
                 duplicates
-                    .SelectMany(x => x.Skip(1))
+                    .SelectMany(x => x.UniqueFileInfos())
                     .Select(x => x.FullName)
                     .Distinct()
                     .Select(x => new KeyValuePair<string, byte>(x, 0)));
@@ -72,8 +71,6 @@ internal class SimilarImagesFileGrouper(
             var pairingIndex = 0;
             foreach (var (fileInfo1, potentialFileInfo2) in pairings)
             {
-                var similarities = new List<(FileInfo, FileInfo)>();
-
                 pairingIndex++;
                 if (pairingIndex < 10 || pairingIndex % 10 == 0)
                 {
@@ -96,43 +93,35 @@ internal class SimilarImagesFileGrouper(
                         {
                             if (cancellationToken.IsCancellationRequested || filesToIgnore.ContainsKey(f.FullName))
                             {
-                                return (f, false);
+                                return (f, ImageComparisonResult.Cancellation);
                             }
 
                             return (f, await imageComparer.CompareAsync(fileInfo1.FullName, f.FullName, cancellationToken));
                         });
 
                 var similarFiles = Task.WhenAll(similarFileTasks).GetAwaiter().GetResult()
-                        .Where(x => x.Item2)
-                        .Select(x => x.f)
+                        .Where(x => x.Item2.Type.ImagesMatch())
+                        .Select(x => new FileInfo2Tuple(fileInfo1, x.f, x.Item2))
                         .ToArray();
 
-                if (similarFiles.Length > 0)
+                if (similarFiles.Length == 0)
                 {
-                    filesToIgnore.AddOrUpdate(fileInfo1.FullName, _ => 0, (_, _) => 0);
+                    continue;
                 }
 
                 foreach (var similarFile in similarFiles)
                 {
-                    filesToIgnore.AddOrUpdate(similarFile.FullName, _ => 0, (_, _) => 0);
-                    similarities.Add((fileInfo1, similarFile));
-                    RaiseFileGroupingHit(
-                        groupingFactory.CreateFileInfoGrouping(
-                            [fileInfo1, similarFile],
-                            FileInfoGroupingKey.Extend(key, fileInfo1.Name)));
-                }
+                    for (var i = 0; i < similarFile.Length; i++)
+                    {
+                        filesToIgnore.AddOrUpdate(similarFile[i].FullName, _ => 0, (_, _) => 0);
+                    }
 
-                result.AddRange(
-                    similarities
-                        .GroupBy(x => x.Item1.FullName)
-                        .Select(g =>
-                        {
-                            var ret = new List<FileInfo> { g.First().Item1 };
-                            ret.AddRange(g.Select(x => x.Item2));
-                            return groupingFactory.CreateFileInfoGrouping(
-                                ret,
-                                FileInfoGroupingKey.Extend(key, g.First().Item1.Name));
-                        }));
+                    var grouping = groupingFactory.CreateFileInfoGrouping(
+                        [similarFile],
+                        FileInfoGroupingKey.Extend(key, fileInfo1.Name));
+                    RaiseFileGroupingHit(grouping);
+                    result.Add(grouping);
+                }
             }
             
             return result.ToArray();

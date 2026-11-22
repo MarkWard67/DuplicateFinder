@@ -33,36 +33,48 @@ internal class EraseFilesReporter : DefaultReporter
         var sb = new StringBuilder();
         foreach (var fileGrouping in fileGroupings)
         {
-            var filesInGroupingByDeletability = fileGrouping
+            var filesNamesInGroupingByDeletability = fileGrouping
+                .SelectMany(x => Enumerable.Range(0, x.Length).Select(y => x[y]))
                 .GroupBy(x => IsAnEraseFromDirectory(x.DirectoryName))
                 .ToDictionary(
                     x => x.Key,
-                    x => x.ToList());
+                    x => x.Select(y => y.FullName).ToHashSet());
 
-            var filesToDelete = filesInGroupingByDeletability.GetValueOrDefault(true) ?? [];
+            var filesNamesToDelete = filesNamesInGroupingByDeletability.GetValueOrDefault(true) ?? [];
 
-            if (filesToDelete.Count == 0)
+            if (filesNamesToDelete.Count == 0)
             {
                 return base.Report([fileGrouping]);
             }
 
-            var filesToKeep = filesInGroupingByDeletability.GetValueOrDefault(false) ?? [];
+            var filesNamesToKeep = filesNamesInGroupingByDeletability.GetValueOrDefault(false) ?? [];
 
-            if (filesToDelete.Count > 0 && filesToKeep.Count == 0)
+            if (filesNamesToDelete.Count > 0 && filesNamesToKeep.Count == 0)
             {
-                var lastFileToDelete = filesToDelete.Last();
-                filesToDelete = filesToDelete.Take(filesToDelete.Count - 1).ToList();
-                filesToKeep.Add(lastFileToDelete);
+                var lastFileToDelete = filesNamesToDelete.Last();
+                filesNamesToDelete.Remove(lastFileToDelete);
+                filesNamesToKeep.Add(lastFileToDelete);
             }
 
-            foreach (var fileInGroup in filesToKeep)
+            foreach (var fileInfoTuple in fileGrouping)
             {
-                sb.AppendLine($"@REM {fileInGroup.FullName}");
-            }
+                if (fileInfoTuple.Properties != null)
+                {
+                    sb.AppendLine($"@REM {fileInfoTuple.Properties}");
+                }
 
-            foreach (var fileInGroup in filesToDelete)
-            {
-                sb.AppendLine($"ERASE \"{fileInGroup.FullName}\"");
+                for (var i = 0; i < fileInfoTuple.Length; i++)
+                {
+                    var fileInGroup = fileInfoTuple[i];
+                    if (filesNamesToDelete.Contains(fileInGroup.FullName))
+                    {
+                        sb.AppendLine($"@ERASE \"{fileInGroup.FullName}\"");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"@REM {fileInGroup.FullName}");
+                    }
+                }
             }
         }
 

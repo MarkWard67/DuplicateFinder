@@ -4,11 +4,22 @@ using ImageMagick;
 namespace DuplicateFinder.ImageComparers;
 
 internal class ImageMagickFallbackImageComparer(
-    double maxDistortion,
-    ICache<string, MagickImage> cache) : IImageComparer
+    ImageMagickImageComparer fastComparer,
+    ImageMagickImageComparer slowComparer)
+    : IImageComparer
 {
-    private readonly ImageMagickFastImageComparer _fastComparer = new(maxDistortion, cache);
-    private readonly ImageMagickSlowImageComparer _slowComparer = new(maxDistortion, cache);
+    private readonly ImageMagickFastImageComparer _fastComparer = (ImageMagickFastImageComparer)fastComparer;
+    private readonly ImageMagickSlowImageComparer _slowComparer = (ImageMagickSlowImageComparer)slowComparer;
+
+    private ImageMagickFallbackImageComparer(
+        double maxDistortionSameFileName,
+        double maxDistortionDifferentFileNames,
+        ICache<string, MagickImage> cache)
+    : this(
+        new ImageMagickFastImageComparer(maxDistortionSameFileName, maxDistortionDifferentFileNames, cache),
+        new ImageMagickSlowImageComparer(maxDistortionSameFileName, maxDistortionDifferentFileNames, cache))
+    {
+    }
 
     public void Dispose()
     {
@@ -16,16 +27,22 @@ internal class ImageMagickFallbackImageComparer(
         _slowComparer.Dispose();
     }
 
-    public async Task<bool> CompareAsync(string image1FullName, string image2FullName, CancellationToken cancellationToken)
+    public async Task<ImageComparisonResult> CompareAsync(string image1FullName, string image2FullName, CancellationToken cancellationToken)
     {
-        if (await _fastComparer.CompareAsync(image1FullName, image2FullName, cancellationToken))
+        var fastComparisonResult = await _fastComparer.CompareAsync(image1FullName, image2FullName, cancellationToken);
+        if (fastComparisonResult.Type.ImagesMatch())
         {
-            return true;
+            return fastComparisonResult;
         }
 
         var baseName1 = Path.GetFileNameWithoutExtension(image1FullName);
         var baseName2 = Path.GetFileNameWithoutExtension(image2FullName);
-        return (baseName1.Contains(baseName2, StringComparison.OrdinalIgnoreCase) || baseName2.Contains(baseName1, StringComparison.OrdinalIgnoreCase)) &&
-               await _slowComparer.CompareAsync(image1FullName, image2FullName, cancellationToken);
+        if (baseName1.Contains(baseName2, StringComparison.OrdinalIgnoreCase) ||
+            baseName2.Contains(baseName1, StringComparison.OrdinalIgnoreCase))
+        {
+            return await _slowComparer.CompareAsync(image1FullName, image2FullName, cancellationToken);
+        }
+
+        return fastComparisonResult;
     }
 }

@@ -40,7 +40,12 @@ internal class AggregateFileGrouper : ISlowFileGrouper
         IFileInfoGroupingFactory groupingFactoryOverride,
         FileInfoGroupingKey? key = null)
     {
-        var result = new List<IFileInfoGrouping> { new FileInfoGrouping(fileInfos, key) };
+        var result = new List<IFileInfoGrouping>
+        {
+            new FileInfoGrouping(
+                key,
+                fileInfos)
+        };
 
         foreach (var fileGrouper in _fileGroupers)
         {
@@ -49,7 +54,7 @@ internal class AggregateFileGrouper : ISlowFileGrouper
             {
                 ret.AddRange(
                     fileGrouper.GroupFiles(
-                        grouping,
+                        grouping.UniqueFileInfos(),
                         groupingFactoryOverride,
                         grouping.Key));
             }
@@ -57,7 +62,9 @@ internal class AggregateFileGrouper : ISlowFileGrouper
             result = ret;
         }
 
-        return result.ToArray();
+        return result
+            .Where(x => x.Count > 1)
+            .ToArray();
     }
 
     public event EventHandler<FileGroupingHitEventArgs>? FileGroupingHit;

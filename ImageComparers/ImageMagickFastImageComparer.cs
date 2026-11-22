@@ -4,9 +4,17 @@ using ImageMagick;
 namespace DuplicateFinder.ImageComparers;
 
 internal class ImageMagickFastImageComparer(
-    double maxDistortion,
+    double maxDistortionSameFileName,
+    double maxDistortionDifferentFileNames,
     ICache<string, MagickImage> cache) : ImageMagickImageComparer(
-    maxDistortion,
+    maxDistortionSameFileName,
+    maxDistortionDifferentFileNames,
     cache,
     ErrorMetric.MeanAbsolute,
-    Channels.Red | Channels.Green | Channels.Blue | Channels.Alpha);
+    Channels.Red | Channels.Green | Channels.Blue | Channels.Alpha)
+{
+    protected override void DecorateImage(MagickImage image)
+    {
+        image.ColorFuzz = new Percentage(10);
+    }
+}

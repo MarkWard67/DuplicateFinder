@@ -2,5 +2,5 @@
 
 internal interface IImageComparer : IDisposable
 {
-    Task<bool> CompareAsync(string image1FullName, string image2FullName, CancellationToken cancellationToken);
+    Task<ImageComparisonResult> CompareAsync(string image1FullName, string image2FullName, CancellationToken cancellationToken);
 }

@@ -22,6 +22,6 @@ internal class DuplicatesFileGroupingReporter(
     protected override IEnumerable<IFileInfoGrouping> GroupFiles()
     {
         var result = base.GroupFiles();
-        return result.Where(x => x.Count > 1);
+        return result.Where(x => x.Count > 0);
     }
 }

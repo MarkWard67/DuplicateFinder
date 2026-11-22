@@ -5,19 +5,30 @@ namespace DuplicateFinder.Files.FileGroupings;
 
 internal record FileInfoGrouping : IFileInfoGrouping
 {
-    private readonly List<FileInfo> _fileInfos;
+    private readonly List<IFileInfoTuple> _fileInfoTuples;
 
     public FileInfoGrouping(
-        IEnumerable<FileInfo> fileInfos,
-        FileInfoGroupingKey? key)
+        FileInfoGroupingKey? key,
+        IEnumerable<FileInfo>? fileInfos = null)
     {
         Key = key;
-        _fileInfos = [.. fileInfos];
+        _fileInfoTuples = fileInfos?
+            .Select(x => new FileInfo1Tuple(x))
+            .Cast<IFileInfoTuple>()
+            .ToList() ?? [];
     }
 
-    public IEnumerator<FileInfo> GetEnumerator()
+    public FileInfoGrouping(
+        FileInfoGroupingKey? key,
+        IEnumerable<IFileInfoTuple>? fileInfoTuples = null)
     {
-        return _fileInfos.GetEnumerator();
+        Key = key;
+        _fileInfoTuples = fileInfoTuples?.ToList() ?? [];
+    }
+
+    public IEnumerator<IFileInfoTuple> GetEnumerator()
+    {
+        return _fileInfoTuples.GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
@@ -25,17 +36,39 @@ internal record FileInfoGrouping : IFileInfoGrouping
         return GetEnumerator();
     }
 
-    public int Count => _fileInfos.Count;
+    public int Count => _fileInfoTuples.Count;
 
     public FileInfoGroupingKey? Key { get; }
 
+    public IEnumerable<FileInfo> UniqueFileInfos()
+    {
+        return _fileInfoTuples
+            .SelectMany(x => Enumerable.Range(0, x.Length).Select(y => x[y]))
+            .Select(x => x)
+            .DistinctBy(x => x.FullName);
+    }
+
     public override string ToString()
     {
-        var sb = new StringBuilder($"{Key}").AppendLine();
+        return ToString(string.Empty);
+    }
 
-        foreach (var fileInfo in _fileInfos)
+    protected string ToString(string title)
+    {
+        var sb = new StringBuilder($"{title}{Key}").AppendLine();
+
+        foreach (var fileInfoTuple in _fileInfoTuples)
         {
-            sb.AppendLine(fileInfo.FullName);
+            if (fileInfoTuple.Properties != null)
+            {
+                sb.AppendLine($"\t{fileInfoTuple.Properties}");
+            }
+
+            for (var i = 0; i < fileInfoTuple.Length; i++)
+            {
+                var fileInfo = fileInfoTuple[i];
+                sb.AppendLine($"\t{fileInfo.FullName}");
+            }
         }
 
         return sb.ToString();

@@ -4,16 +4,23 @@ using ImageMagick;
 namespace DuplicateFinder.ImageComparers;
 
 internal class ImageMagickSlowImageComparer(
-    double maxDistortion,
+    double maxDistortionSameFileName,
+    double maxDistortionDifferentFileNames,
     ICache<string, MagickImage> cache)
     : ImageMagickImageComparer(
-        maxDistortion,
+        maxDistortionSameFileName,
+        maxDistortionDifferentFileNames,
         cache,
         ComparisonErrorMetric,
         Channels.Red | Channels.Green | Channels.Blue)
 {
     private const ErrorMetric ComparisonErrorMetric = ErrorMetric.PerceptualHash;
     private readonly PerceptualHashCache _cache = new();
+
+    protected override void DecorateImage(MagickImage image)
+    {
+        // No decoration necessary
+    }
 
     protected override List<int> GetRotationAngles(MagickImage image1, MagickImage image2)
     {
@@ -41,7 +48,8 @@ internal class ImageMagickSlowImageComparer(
 
         try
         {
-            return perceptualHashTask1.Result.SumSquaredDistance(perceptualHashTask2.Result);
+            var distortion = perceptualHashTask1.Result.SumSquaredDistance(perceptualHashTask2.Result);
+            return distortion;
         }
         catch (Exception)
         {
