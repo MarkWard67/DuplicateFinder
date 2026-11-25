@@ -1,10 +1,20 @@
-﻿namespace DuplicateFinder.Files.FileGroupings;
+﻿using DuplicateFinder.Reporters;
 
-internal record FileInfo1Tuple(
-    FileInfo FileInfo1,
-    object? Properties = null) : IFileInfoTuple
+namespace DuplicateFinder.Files.FileGroupings;
+
+internal record FileInfo1Tuple : FileInfoNTuple
 {
-    public int Length { get; } = 1;
+    public FileInfo1Tuple(FileInfo FileInfo1,
+        ICsvReportable? Properties = null) : base([FileInfo1], Properties)
+    {
+        this.FileInfo1 = FileInfo1;
+    }
 
-    public FileInfo this[int index] => index == 0 ? FileInfo1 : throw new ArgumentOutOfRangeException(nameof(index));
+    public FileInfo FileInfo1 { get; init; }
+
+    public void Deconstruct(out FileInfo FileInfo1, out ICsvReportable? Properties)
+    {
+        FileInfo1 = this.FileInfo1;
+        Properties = this.Properties;
+    }
 }

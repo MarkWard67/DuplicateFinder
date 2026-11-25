@@ -1,17 +1,18 @@
 ﻿using System.Collections;
-using System.Text;
+using DuplicateFinder.Reporters;
 
 namespace DuplicateFinder.Files.FileGroupings;
 
 internal record FileInfoGrouping : IFileInfoGrouping
 {
-    private readonly List<IFileInfoTuple> _fileInfoTuples;
+    private readonly IReadOnlyCollection<IFileInfoTuple> _fileInfoTuples;
 
     public FileInfoGrouping(
+        FileInfoGroupingType type,
         FileInfoGroupingKey? key,
         IEnumerable<FileInfo>? fileInfos = null)
+        : this(type, key)
     {
-        Key = key;
         _fileInfoTuples = fileInfos?
             .Select(x => new FileInfo1Tuple(x))
             .Cast<IFileInfoTuple>()
@@ -19,12 +20,33 @@ internal record FileInfoGrouping : IFileInfoGrouping
     }
 
     public FileInfoGrouping(
+        FileInfoGroupingType type,
+        FileInfoGroupingKey? key,
+        IFileInfoTuple tuple)
+        : this(type, key)
+    {
+        _fileInfoTuples = [tuple];
+    }
+
+    public FileInfoGrouping(
+        FileInfoGroupingType type,
         FileInfoGroupingKey? key,
         IEnumerable<IFileInfoTuple>? fileInfoTuples = null)
+        : this(type, key)
     {
-        Key = key;
         _fileInfoTuples = fileInfoTuples?.ToList() ?? [];
     }
+
+    private FileInfoGrouping(
+        FileInfoGroupingType type,
+        FileInfoGroupingKey? key)
+    {
+        Type = type;
+        Key = key;
+        _fileInfoTuples = [];
+    }
+
+    public int Count => _fileInfoTuples.Count;
 
     public IEnumerator<IFileInfoTuple> GetEnumerator()
     {
@@ -36,9 +58,9 @@ internal record FileInfoGrouping : IFileInfoGrouping
         return GetEnumerator();
     }
 
-    public int Count => _fileInfoTuples.Count;
-
     public FileInfoGroupingKey? Key { get; }
+
+    public FileInfoGroupingType Type { get; }
 
     public IEnumerable<FileInfo> UniqueFileInfos()
     {
@@ -48,29 +70,19 @@ internal record FileInfoGrouping : IFileInfoGrouping
             .DistinctBy(x => x.FullName);
     }
 
-    public override string ToString()
+    public virtual string ToCsv(char separator = CsvValues.Separator, char delimiter = CsvValues.Delimiter)
     {
-        return ToString(string.Empty);
+        var values = new List<object> { Type };
+        values.AddRange(_fileInfoTuples);
+
+        return CsvReporter.ToCsv(
+            values,
+            separator,
+            delimiter);
     }
 
-    protected string ToString(string title)
+    public override string ToString()
     {
-        var sb = new StringBuilder($"{title}{Key}").AppendLine();
-
-        foreach (var fileInfoTuple in _fileInfoTuples)
-        {
-            if (fileInfoTuple.Properties != null)
-            {
-                sb.AppendLine($"\t{fileInfoTuple.Properties}");
-            }
-
-            for (var i = 0; i < fileInfoTuple.Length; i++)
-            {
-                var fileInfo = fileInfoTuple[i];
-                sb.AppendLine($"\t{fileInfo.FullName}");
-            }
-        }
-
-        return sb.ToString();
+        return ToCsv();
     }
 }

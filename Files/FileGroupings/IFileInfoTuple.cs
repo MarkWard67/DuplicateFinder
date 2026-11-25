@@ -1,6 +1,8 @@
-﻿namespace DuplicateFinder.Files.FileGroupings;
+﻿using DuplicateFinder.Reporters;
 
-internal interface IFileInfoTuple
+namespace DuplicateFinder.Files.FileGroupings;
+
+internal interface IFileInfoTuple : ICsvReportable, IEnumerable<FileInfo>
 {
     public int Length { get; }
 
@@ -11,5 +13,5 @@ internal interface IFileInfoTuple
     /// </summary>
     public FileInfo this[int index] { get; }
 
-    public object? Properties { get; }
+    public ICsvReportable? Properties { get; }
 }

@@ -23,13 +23,13 @@ internal class SimilarImagesFileGrouper(
     {
         return GroupFiles(
             fileInfos,
-            FileInfoGroupingFactory.Instance,
+            SimilarFileInfoGroupingFactory.Instance,
             key);
     }
 
     public IEnumerable<IFileInfoGrouping> GroupFiles(
         IEnumerable<FileInfo> fileInfos,
-        IFileInfoGroupingFactory groupingFactory,
+        IFileInfoGroupingFactory _,
         FileInfoGroupingKey? key = null)
     {
         RaiseProgressUpdate($"Starting similar images analysis for grouping {key?.ToString() ?? "unnamed"}...");
@@ -40,7 +40,10 @@ internal class SimilarImagesFileGrouper(
 
             if (fileInfoArray.Length < 2)
             {
-                return [new FileInfoGrouping(key, fileInfoArray)];
+                return [new FileInfoGrouping(
+                    FileInfoGroupingType.None,
+                    key,
+                    fileInfoArray)];
             }
 
             RaiseProgressUpdate($"Seeking duplicates for grouping {key?.ToString() ?? "unnamed"}...");
@@ -116,9 +119,9 @@ internal class SimilarImagesFileGrouper(
                         filesToIgnore.AddOrUpdate(similarFile[i].FullName, _ => 0, (_, _) => 0);
                     }
 
-                    var grouping = groupingFactory.CreateFileInfoGrouping(
-                        [similarFile],
-                        FileInfoGroupingKey.Extend(key, fileInfo1.Name));
+                    var grouping = new SimilarFileInfoGrouping(
+                        FileInfoGroupingKey.Extend(key, fileInfo1.Name),
+                        [similarFile]);
                     RaiseFileGroupingHit(grouping);
                     result.Add(grouping);
                 }

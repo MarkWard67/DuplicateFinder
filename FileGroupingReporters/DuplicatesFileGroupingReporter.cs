@@ -1,4 +1,5 @@
-﻿using DuplicateFinder.Files.FileFinders;
+﻿using System.Runtime.CompilerServices;
+using DuplicateFinder.Files.FileFinders;
 using DuplicateFinder.Files.FileGroupers;
 using DuplicateFinder.Files.FileGroupings;
 using DuplicateFinder.Files.FileHashers;
@@ -22,6 +23,6 @@ internal class DuplicatesFileGroupingReporter(
     protected override IEnumerable<IFileInfoGrouping> GroupFiles()
     {
         var result = base.GroupFiles();
-        return result.Where(x => x.Count > 0);
+        return result.Where(x => x.SelectMany(y => y).Any());
     }
 }

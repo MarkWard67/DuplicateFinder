@@ -9,4 +9,7 @@ internal interface IFileInfoGroupingFactory
     IFileInfoGrouping CreateFileInfoGrouping(
         IEnumerable<IFileInfoTuple> fileInfoTuples,
         FileInfoGroupingKey? key = null);
+
+    IFileInfoGrouping CreateFileInfoGrouping(IFileInfoGrouping fileInfoGrouping);
+
 }

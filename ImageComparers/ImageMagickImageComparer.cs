@@ -42,11 +42,31 @@ internal abstract class ImageMagickImageComparer(
 
     protected abstract void DecorateImage(MagickImage image);
 
-    private static MagickImage RotateImage(MagickImage image, int degrees)
+    private static MagickImage ManipulateImage(MagickImage image, params Action<MagickImage>[] actions)
     {
         var clone = (MagickImage)image.Clone();
-        clone.Rotate(degrees);
+
+        foreach (var action in actions)
+        {
+            action(clone);
+        }
+
         return clone;
+    }
+
+
+    private static MagickImage CropImage(MagickImage image, MagickGeometry cropGeometry, bool cloneImage = true)
+    {
+        var imageToCrop = cloneImage ? (MagickImage)image.Clone() : image;
+        imageToCrop.Crop(cropGeometry);
+        return imageToCrop;
+    }
+
+    private static MagickImage RotateImage(MagickImage image, int degrees, bool cloneImage = true)
+    {
+        var imageToRotate = cloneImage ? (MagickImage)image.Clone() : image;
+        imageToRotate.Rotate(degrees);
+        return imageToRotate;
     }
 
     private static (MagickImage, MagickImage) Scale(MagickImage image1, MagickImage image2)
@@ -96,6 +116,57 @@ internal abstract class ImageMagickImageComparer(
         return await Task.FromResult(magickImage);
     }
 
+    private static (bool MustCrop, MagickGeometry? CropGeometry) GetSignificantRect(MagickImage image)
+    {
+        var white = new MagickColor(255, 255, 255);
+        var colorFuzz = new Percentage(10);
+        var pixels = image.GetPixels();
+
+        (int x, int y)? topLeft = null;
+        var mustCrop = false;
+        for(var y=0;y<image.Height && topLeft == null;y++)
+        {
+            for(var x=0; x < image.Width && topLeft == null; x++)
+            {
+                var pixel = pixels.GetPixel(x, y);
+                var colour = pixel.ToColor();
+                if (colour != null && !colour.FuzzyEquals(white, colorFuzz))
+                {
+                    topLeft = (x, y);
+                    mustCrop |= (x > 0) || (y > 0);
+                }
+            }
+        }
+
+        var scanOrigin = topLeft ?? (x:0, y:0);
+
+        (int x, int y)? bottomRight = null;
+        for(var y=(int)(image.Height-1);y>=scanOrigin.y && bottomRight == null;y--)
+        {
+            for(var x=(int)(image.Width-1); x >=scanOrigin.x && bottomRight == null; x--)
+            {
+                var pixel = pixels.GetPixel(x, y);
+                var colour = pixel.ToColor();
+                if (colour != null && !colour.FuzzyEquals(white, colorFuzz))
+                {
+                    bottomRight = (x, y);
+                    mustCrop |= (x < image.Width - 1) || (y < image.Height -1);
+                }
+            }
+        }
+
+        if (!mustCrop)
+        {
+            return (false, null);
+        }
+
+        topLeft ??= (0, 0);
+        bottomRight ??= ((int)(image.Width - 1), (int)(image.Height - 1));
+        var size = (Width: (uint)(1 + bottomRight.Value.x - topLeft.Value.x), Height: (uint)(1 + bottomRight.Value.y - topLeft.Value.y));
+
+        return (true, new MagickGeometry(topLeft.Value.x, topLeft.Value.y, size.Width, size.Height));
+    }
+ 
     private async Task<ImageComparisonResult> CompareAsyncImpl(string image1FullName, string image2FullName, ErrorMetric errorMetric, CancellationToken cancellationToken)
     {
         if (image1FullName == image2FullName)
@@ -115,10 +186,22 @@ internal abstract class ImageMagickImageComparer(
                 CreateImageAsync,
                 cancellationToken);
 
+            var cropImage1 = GetSignificantRect(image1);
+            if (cropImage1.MustCrop)
+            {
+                image1.Crop(cropImage1.CropGeometry!);
+            }
+
             var originalImage2 = await cache.GetOrCreateAsync(
                 image2FullName,
                 CreateImageAsync,
                 cancellationToken);
+
+            var cropImage2 = GetSignificantRect(originalImage2);
+            if (cropImage2.MustCrop)
+            {
+                originalImage2.Crop(cropImage2.CropGeometry!);
+            }
 
             var rotationAngles = GetRotationAngles(image1, originalImage2).DefaultIfEmpty(0);
             var match = rotationAngles
@@ -134,6 +217,7 @@ internal abstract class ImageMagickImageComparer(
 
                     return new ImageMagickImageComparisonResult
                     {
+                        ColorFuzz = scaledImage1.ColorFuzz,
                         Type = distortion <= maxDistortion ? ImageComparisonResultType.PartialMatch : ImageComparisonResultType.NoMatch,
                         Channels = comparisonChannels,
                         ErrorMetric = comparisonErrorMetric,

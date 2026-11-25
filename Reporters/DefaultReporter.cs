@@ -16,7 +16,7 @@ internal class DefaultReporter : IReporter
         var sb = new StringBuilder();
         foreach (var fileGroup in fileGroups)
         {
-            sb.AppendLine($"{fileGroup}");
+            sb.Append($"{fileGroup.ToCsv()}");
         }
 
         return sb.ToString();

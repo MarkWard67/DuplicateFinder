@@ -22,4 +22,11 @@ internal class SimilarFileInfoGroupingFactory : IFileInfoGroupingFactory
         return new SimilarFileInfoGrouping(key ?? new FileInfoGroupingKey(), fileInfoTuples);
 
     }
+
+    public IFileInfoGrouping CreateFileInfoGrouping(IFileInfoGrouping fileInfoGrouping)
+    {
+        return new SimilarFileInfoGrouping(
+            fileInfoGrouping.Key ?? new FileInfoGroupingKey(),
+            fileInfoGrouping);
+    }
 }

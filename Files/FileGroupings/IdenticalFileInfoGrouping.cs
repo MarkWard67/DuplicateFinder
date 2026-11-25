@@ -5,19 +5,21 @@ internal record IdenticalFileInfoGrouping : FileInfoGrouping
     public IdenticalFileInfoGrouping(
         FileInfoGroupingKey key,
         IEnumerable<FileInfo> fileInfos)
-        : base(key, fileInfos)
+        : base(FileInfoGroupingType.Identical, key, fileInfos)
+    {
+    }
+
+    public IdenticalFileInfoGrouping(
+        FileInfoGroupingKey key,
+        IFileInfoTuple tuple)
+        : base(FileInfoGroupingType.Identical, key, tuple)
     {
     }
 
     public IdenticalFileInfoGrouping(
         FileInfoGroupingKey key,
         IEnumerable<IFileInfoTuple> fileInfoTuples)
-        : base(key, fileInfoTuples)
+        : base(FileInfoGroupingType.Identical, key, fileInfoTuples)
     {
-    }
-
-    public override string ToString()
-    {
-        return ToString("Identical ");
     }
 }

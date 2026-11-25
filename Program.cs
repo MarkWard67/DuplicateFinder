@@ -1,4 +1,5 @@
-﻿using DuplicateFinder;
+﻿using System.Text.RegularExpressions;
+using DuplicateFinder;
 using DuplicateFinder.FileGroupingReporters;
 using DuplicateFinder.Files;
 using DuplicateFinder.Files.FileExcluders;
@@ -100,13 +101,16 @@ try
                 new EraseFilesReporter(
                     Path.Combine(rootFolder, @"Other computers\Office PC\Photos\From Google Photos 20261001"),
                     Path.Combine(rootFolder, @"Other computers\Office PC\Photos\__MISCELLANEOUS"),
-                    Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Years\*"),
-                    Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Printed")),
+                    Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Friends and Family\Eileen 80"),
+                    Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Printed"),
+                    new Regex(@"\d{4}$", RegexOptions.IgnoreCase)),
+                    //new Regex(Regex.Escape(Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Friends and Family\") + @"\d{4}"), RegexOptions.IgnoreCase),
+                    //new Regex(Regex.Escape(Path.Combine(rootFolder, @"Other computers\Office PC\Photos\Years\") + @"\d{4}"), RegexOptions.IgnoreCase)),
                 filePairer);
             break;
 
         default:
-            throw new ArgumentOutOfRangeException();
+            throw new ArgumentOutOfRangeException(nameof(commandType));
     }
 
     reporter?.SubReportAvailable += OnSubReportAvailable;
@@ -188,7 +192,7 @@ static IFileGroupingReporter FindAndReportDuplicatesWithinFolders(
                 true),
             fileFindIsRecursive,
             fileFindFileSpec,
-            new ExtensionFileExcluder([".ini"])),
+            new FileExtensionFileExcluder([".ini"])),
         new DirectoryNameFileGrouper(),
         fileHasher,
         reporter);
@@ -209,7 +213,7 @@ static IFileGroupingReporter FindAndReportSimilarFilesInIndividualFolders(
                 true),
             fileFindIsRecursive,
             fileFindFileSpec,
-            new ExtensionFileExcluder([".ini"])),
+            new FileExtensionFileExcluder([".ini"])),
         new DirectoryNameFileGrouper(),
         fileHasher,
         imageComparer,
@@ -232,7 +236,9 @@ static IFileGroupingReporter FindAndReportSimilarFilesAcrossFolders(
                 true),
             fileFindIsRecursive,
             fileFindFileSpec,
-            new ExtensionFileExcluder([".ini"])),
+            new AggregateFileExcluder(
+                new FileExtensionFileExcluder([".ini"]),
+                new FileNameFileExcluder("Report.jpg", "Report 1.jpg"))),
         NoopFileGrouper.Instance,
         fileHasher,
         imageComparer,
@@ -253,7 +259,7 @@ static IFileGroupingReporter FindAndReportDuplicateAcrossFolders(
                 true),
             fileFindIsRecursive,
             fileFindFileSpec,
-            new ExtensionFileExcluder([".ini"])),
+            new FileExtensionFileExcluder([".ini"])),
         NoopFileGrouper.Instance,
         fileHasher,
         reporter);

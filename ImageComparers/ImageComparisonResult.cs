@@ -1,6 +1,9 @@
-﻿namespace DuplicateFinder.ImageComparers;
+﻿using System.ComponentModel.DataAnnotations;
+using DuplicateFinder.Reporters;
 
-internal record ImageComparisonResult
+namespace DuplicateFinder.ImageComparers;
+
+internal record ImageComparisonResult : ICsvReportable
 {
     public required ImageComparisonResultType Type
     {
@@ -27,5 +30,16 @@ internal record ImageComparisonResult
             Type = ImageComparisonResultType.Failure,
             Exception = ex
         };
+    }
+
+    public override string ToString()
+    {
+        return ToCsv();
+    }
+
+    public virtual string ToCsv(char separator = CsvValues.Separator, char delimiter = CsvValues.Delimiter)
+    {
+        var values = new List<object> { Type, Exception?.Message ?? string.Empty };
+        return CsvReporter.ToCsv(values, separator, delimiter);
     }
 }

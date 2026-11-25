@@ -1,10 +1,12 @@
-﻿namespace DuplicateFinder.Files.FileGroupings;
+﻿using DuplicateFinder.Reporters;
 
-internal interface IFileInfoGrouping : IEnumerable<IFileInfoTuple>
+namespace DuplicateFinder.Files.FileGroupings;
+
+internal interface IFileInfoGrouping : IEnumerable<IFileInfoTuple>, ICsvReportable
 {
-    public int Count { get; }
-
     public FileInfoGroupingKey? Key { get; }
 
     public IEnumerable<FileInfo> UniqueFileInfos();
+
+    public FileInfoGroupingType Type { get; }
 }

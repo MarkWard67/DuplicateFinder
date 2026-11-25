@@ -29,10 +29,12 @@ internal class AggregateFileGrouper : ISlowFileGrouper
         IEnumerable<FileInfo> fileInfos,
         FileInfoGroupingKey? key = null)
     {
-        return GroupFiles(
+        var fileGroupings = GroupFiles(
             fileInfos,
-            _groupingFactory,
+            FileInfoGroupingFactory.Instance,
             key);
+
+        return fileGroupings.Select(x => _groupingFactory.CreateFileInfoGrouping(x));
     }
 
     public IEnumerable<IFileInfoGrouping> GroupFiles(
@@ -43,6 +45,7 @@ internal class AggregateFileGrouper : ISlowFileGrouper
         var result = new List<IFileInfoGrouping>
         {
             new FileInfoGrouping(
+                FileInfoGroupingType.None,
                 key,
                 fileInfos)
         };
@@ -63,7 +66,7 @@ internal class AggregateFileGrouper : ISlowFileGrouper
         }
 
         return result
-            .Where(x => x.Count > 1)
+            .Where(x => x.SelectMany(y => y).Skip(1).Any())
             .ToArray();
     }
 

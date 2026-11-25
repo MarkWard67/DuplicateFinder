@@ -5,19 +5,14 @@ internal record SimilarFileInfoGrouping : FileInfoGrouping
     public SimilarFileInfoGrouping(
         FileInfoGroupingKey key,
         IEnumerable<FileInfo> fileInfos)
-        : base(key, fileInfos)
+        : base(FileInfoGroupingType.Similar, key, fileInfos)
     {
     }
 
     public SimilarFileInfoGrouping(
         FileInfoGroupingKey key,
         IEnumerable<IFileInfoTuple> fileInfoTuples)
-        : base(key, fileInfoTuples)
+        : base(FileInfoGroupingType.Similar, key, fileInfoTuples)
     {
-    }
-
-    public override string ToString()
-    {
-        return ToString("Similar ");
     }
 }

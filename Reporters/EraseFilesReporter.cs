@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.RegularExpressions;
 using DuplicateFinder.Files.FileGroupings;
 
 namespace DuplicateFinder.Reporters;
@@ -6,24 +7,27 @@ namespace DuplicateFinder.Reporters;
 internal class EraseFilesReporter : DefaultReporter
 {
     private readonly HashSet<string> _eraseFromFolderPaths = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _eraseFromRootFolderPaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<Regex> _eraseFromFolderRegexes = [];
 
-    public EraseFilesReporter(params IEnumerable<string> eraseFromFolderPaths)
+    public EraseFilesReporter(params IEnumerable<object> eraseFromFolderSpecs)
     {
-        var folderPaths = eraseFromFolderPaths
-            .Distinct()
-            .ToArray();
-
-        foreach (var folderPath in folderPaths)
+        foreach (var folderSpec in eraseFromFolderSpecs)
         {
-            if (folderPath.EndsWith(@"\*"))
+            switch (folderSpec)
             {
-                var rootFolderPath = folderPath[..^1];
-                _eraseFromRootFolderPaths.Add(rootFolderPath);
-            }
-            else
-            {
-                _eraseFromFolderPaths.Add(folderPath);
+                case string folderPath:
+                    _eraseFromFolderPaths.Add(folderPath);
+                    break;
+
+                case Regex folderRegex:
+                    _eraseFromFolderRegexes.Add(folderRegex);
+                    break;
+
+                case null:
+                    break;
+
+                default:
+                    throw new ArgumentException("Strings or Regexes only, please", nameof(eraseFromFolderSpecs));
             }
         }
     }
@@ -56,26 +60,21 @@ internal class EraseFilesReporter : DefaultReporter
                 filesNamesToKeep.Add(lastFileToDelete);
             }
 
+            var verbs = new Dictionary<string, string>();
             foreach (var fileInfoTuple in fileGrouping)
             {
-                if (fileInfoTuple.Properties != null)
+                foreach (var fileInGroup in fileInfoTuple)
                 {
-                    sb.AppendLine($"@REM {fileInfoTuple.Properties}");
-                }
-
-                for (var i = 0; i < fileInfoTuple.Length; i++)
-                {
-                    var fileInGroup = fileInfoTuple[i];
-                    if (filesNamesToDelete.Contains(fileInGroup.FullName))
-                    {
-                        sb.AppendLine($"@ERASE \"{fileInGroup.FullName}\"");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"@REM {fileInGroup.FullName}");
-                    }
+                    verbs.Add(
+                        fileInGroup.FullName,
+                        filesNamesToDelete.Contains(fileInGroup.FullName) ? "@ERASE " : "@REM ");
                 }
             }
+
+            var values = new List<object> { $"{CsvValues.Delimiter}{fileGrouping.Type}{CsvValues.Delimiter}" };
+            values.AddRange(fileGrouping
+                .Select(fileInfoTuple => fileInfoTuple.ToCsvImpl(CsvValues.Separator, CsvValues.Delimiter, verbs)));
+            sb.Append(CsvReporter.ToCsv(values));
         }
 
         return sb.ToString();
@@ -83,6 +82,6 @@ internal class EraseFilesReporter : DefaultReporter
 
     private bool IsAnEraseFromDirectory(string? directoryPath)
     {
-        return directoryPath != null && (_eraseFromFolderPaths.Contains(directoryPath) || _eraseFromRootFolderPaths.Any(directoryPath.StartsWith));
+        return directoryPath != null && (_eraseFromFolderPaths.Contains(directoryPath) || _eraseFromFolderRegexes.Any(x => x.IsMatch(directoryPath)));
     }
 }
